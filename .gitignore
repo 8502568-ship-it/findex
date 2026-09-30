@@ -9,3 +9,11 @@ wheels/
 # Virtual environments
 .venv
 data/
+.idea/
+
+.idea/
+*.bin
+*.fidx
+*.pkl
+results.json
+results.md

@@ -1,1 +1,3 @@
-"""findex: a search engine built lab by lab."""
+"""findex: Search engine library and CLI tool."""
+
+__version__ = "0.4.0"

@@ -1,21 +1,44 @@
 [project]
 name = "findex"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.4.0"
+description = "A toy search engine built with modern Python: typed, tested, and packaged CLI."
 readme = "README.md"
-authors = [
-    { name = "Olexii", email = "8502568@stud.kai.edu.ua" }
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.7.0",
 ]
-requires-python = ">=3.13"
-dependencies = []
 
-[build-system]
-requires = ["uv_build>=0.12.17,<0.13.0"]
-build-backend = "uv_build"
+[project.scripts]
+findex = "findex.cli:app"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
-    "python-docx>=1.2.0",
-    "ruff>=0.16.8",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "hypothesis>=6.100.0",
+    "pyright>=1.1.350",
+    "ruff>=0.4.0",
+    "python-docx>=1.1.0",
+]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+pythonVersion = "3.12"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=findex --cov-report=term-missing"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]

@@ -1,99 +1,156 @@
-"""M1 — побудова інвертованого індексу одним проходом по лінивому корпусу.
+import json
+import logging
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Literal
 
-    python -m findex.index data/ --out index.bin
-"""
-from __future__ import annotations
+from findex.models import DocId, Posting, SearchResult
+from findex.scoring import BM25Scorer, Scorer, TFIDFScorer
+from findex.tokenizer import tokenize
 
-import argparse
-import time
-import tracemalloc
-from array import array
-from collections import Counter, defaultdict
-from collections.abc import Iterable
-
-from findex.models import ArrayIndex, DocMeta, ObjectIndex, PlainPosting, Posting
-from findex.pipeline import RawDoc, iter_docs, tokenize
-from findex.util import timed
+log = logging.getLogger(__name__)
 
 
-@timed
-def build_index(docs: Iterable[RawDoc], variant: str = "slots",
-                positions: bool = False):
-    """variant: 'plain' | 'slots' | 'array'.
-
-    Один прохід: для поточного документа збираємо Counter (і позиції),
-    в кінці документа «скидаємо» його у глобальний defaultdict. doc_id
-    зростають, тому списки постінгів автоматично відсортовані.
-    Корпус НЕ матеріалізується — у пам'яті лише індекс.
-    """
-    if variant not in {"plain", "slots", "array"}:
-        raise ValueError(variant)
-    cls = PlainPosting if variant == "plain" else Posting
-    if variant == "array":
-        if positions:
-            raise ValueError("variant 'array' не зберігає позиції")
-        arr_post: defaultdict[str, tuple[array, array]] = defaultdict(
-            lambda: (array("I"), array("I")))
-        idx = ArrayIndex()
-    else:
-        obj_post: defaultdict[str, list] = defaultdict(list)
-        idx = ObjectIndex()
-
-    for doc_id, doc in enumerate(docs):
-        counts: Counter[str] = Counter()
-        pos: defaultdict[str, list[int]] = defaultdict(list)
-        n = 0
-        for i, tok in enumerate(tokenize(doc.text)):
-            counts[tok] += 1
-            if positions:
-                pos[tok].append(i)
-            n += 1
-        idx.doc_lengths[doc_id] = n
-        idx.doc_meta[doc_id] = DocMeta(doc_id, doc.path, doc.title)
-        for term, tf in counts.items():
-            if variant == "array":
-                ids, tfs = arr_post[term]
-                ids.append(doc_id)
-                tfs.append(tf)
-            elif positions:
-                obj_post[term].append(cls(doc_id, tf, tuple(pos[term])))
-            else:
-                obj_post[term].append(cls(doc_id, tf))
-
-    # defaultdict -> звичайний dict, щоб запит неіснуючого терміна не створював запис
-    idx.postings = dict(arr_post if variant == "array" else obj_post)
-    return idx
+def merge_and(a: list[DocId], b: list[DocId]) -> list[DocId]:
+    """Linear merge intersection for two sorted doc ID lists."""
+    i, j = 0, 0
+    res: list[DocId] = []
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            res.append(a[i])
+            i += 1
+            j += 1
+        elif a[i] < b[j]:
+            i += 1
+        else:
+            j += 1
+    return res
 
 
-def main(argv=None) -> None:
-    from findex.store import save
-
-    ap = argparse.ArgumentParser(prog="findex.index")
-    ap.add_argument("data", help="каталог із документами")
-    ap.add_argument("--out", default="index.bin")
-    ap.add_argument("--format", choices=["pickle", "json", "binary"], default="pickle")
-    ap.add_argument("--variant", choices=["plain", "slots", "array"], default=None,
-                    help="за замовчуванням: slots (pickle/json) або array (binary)")
-    ap.add_argument("--positions", action="store_true", help="зберігати позиції токенів")
-    a = ap.parse_args(argv)
-    variant = a.variant or ("array" if a.format == "binary" else "slots")
-
-    tracemalloc.start()
-    t0 = time.perf_counter()
-    idx = build_index(iter_docs(a.data), variant, a.positions)
-    t_build = time.perf_counter() - t0
-    _, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
-    t1 = time.perf_counter()
-    save(idx, a.out, a.format)
-    t_save = time.perf_counter() - t1
-    import os
-    print(f"docs={idx.n_docs} terms={len(idx.terms())} variant={variant} "
-          f"positions={a.positions}")
-    print(f"build: {t_build:.2f}s, peak memory: {peak/2**20:.1f} MiB (tracemalloc)")
-    print(f"save[{a.format}]: {t_save:.2f}s, file: {os.path.getsize(a.out)/2**20:.2f} MiB")
+def merge_or(a: list[DocId], b: list[DocId]) -> list[DocId]:
+    """Linear merge union for two sorted doc ID lists."""
+    i, j = 0, 0
+    res: list[DocId] = []
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            res.append(a[i])
+            i += 1
+            j += 1
+        elif a[i] < b[j]:
+            res.append(a[i])
+            i += 1
+        else:
+            res.append(b[j])
+            j += 1
+    while i < len(a):
+        res.append(a[i])
+        i += 1
+    while j < len(b):
+        res.append(b[j])
+        j += 1
+    return res
 
 
-if __name__ == "__main__":
-    main()
+class InvertedIndex:
+    def __init__(self) -> None:
+        self.postings: dict[str, list[Posting]] = defaultdict(list)
+        self.doc_lengths: dict[DocId, int] = {}
+        self.doc_titles: dict[DocId, str] = {}
+        self.total_docs: int = 0
+
+    @property
+    def avg_doc_len(self) -> float:
+        if self.total_docs == 0:
+            return 0.0
+        return sum(self.doc_lengths.values()) / self.total_docs
+
+    def add_document(self, doc_id: DocId, title: str, text: str, store_positions: bool = False) -> None:
+        log.debug("Indexing doc_id=%d title=%s", doc_id, title)
+        tokens = list(tokenize(text))
+        self.doc_lengths[doc_id] = len(tokens)
+        self.doc_titles[doc_id] = title
+        self.total_docs += 1
+
+        term_positions: dict[str, list[int]] = defaultdict(list)
+        for pos, term in enumerate(tokens):
+            term_positions[term].append(pos)
+
+        for term, positions in term_positions.items():
+            pos_list = positions if store_positions else []
+            self.postings[term].append(
+                Posting(doc_id=doc_id, term_frequency=len(positions), positions=pos_list)
+            )
+
+    def search(
+        self,
+        query: str,
+        k: int = 10,
+        scorer_name: Literal["bm25", "tfidf"] = "bm25",
+    ) -> list[SearchResult]:
+        tokens = list(tokenize(query))
+        if not tokens:
+            return []
+
+        scorer: Scorer = BM25Scorer() if scorer_name == "bm25" else TFIDFScorer()
+        scores: dict[DocId, float] = defaultdict(float)
+
+        for token in tokens:
+            postings_list = self.postings.get(token, [])
+            df = len(postings_list)
+            for p in postings_list:
+                s = scorer.score(
+                    doc_id=p.doc_id,
+                    tf=p.term_frequency,
+                    doc_len=self.doc_lengths.get(p.doc_id, 0),
+                    avg_doc_len=self.avg_doc_len,
+                    df=df,
+                    total_docs=self.total_docs,
+                )
+                scores[p.doc_id] += s
+
+        ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:k]
+        return [
+            SearchResult(
+                doc_id=doc_id,
+                score=score,
+                title=self.doc_titles.get(doc_id, f"Doc {doc_id}"),
+                snippet="",
+            )
+            for doc_id, score in ranked
+        ]
+
+    def save(self, filepath: Path) -> None:
+        data: dict[str, Any] = {
+            "total_docs": self.total_docs,
+            "doc_lengths": {str(k): v for k, v in self.doc_lengths.items()},
+            "doc_titles": {str(k): v for k, v in self.doc_titles.items()},
+            "postings": {
+                term: [
+                    {"doc_id": p.doc_id, "tf": p.term_frequency, "pos": p.positions}
+                    for p in plist
+                ]
+                for term, plist in self.postings.items()
+            },
+        }
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        log.info("Saved index to %s (terms=%d, docs=%d)", filepath, len(self.postings), self.total_docs)
+
+    @classmethod
+    def load(cls, filepath: Path) -> "InvertedIndex":
+        if not filepath.exists():
+            raise FileNotFoundError(f"Index file not found: {filepath}")
+        with open(filepath, encoding="utf-8") as f:
+            data = json.load(f)
+
+        idx = cls()
+        idx.total_docs = int(data["total_docs"])
+        idx.doc_lengths = {int(k): v for k, v in data["doc_lengths"].items()}
+        idx.doc_titles = {int(k): v for k, v in data["doc_titles"].items()}
+        for term, plist in data["postings"].items():
+            idx.postings[term] = [
+                Posting(doc_id=p["doc_id"], term_frequency=p["tf"], positions=p["pos"])
+                for p in plist
+            ]
+        log.info("Loaded index from %s", filepath)
+        return idx

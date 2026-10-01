@@ -19,3 +19,8 @@ results.json
 results.md
 index_lab3.pkl
 results_lab3.json
+
+# Lab 5
+.venv-*/
+index.json
+index*.json

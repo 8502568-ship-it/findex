@@ -1,15 +1,17 @@
 import json
 import logging
 import sys
+import traceback
 from pathlib import Path
 from typing import Annotated, Literal
 
 import typer
 from rich.console import Console
-from rich.progress import track
+from rich.progress import Progress
 from rich.table import Table
 
 from findex.index import InvertedIndex
+from findex.parallel import DEFAULT_EXECUTOR, ExecutorKind, build_index, list_corpus
 
 app = typer.Typer(help="findex: Modern Search Engine CLI")
 console = Console()
@@ -47,30 +49,49 @@ def index(
     out: Annotated[Path, typer.Option("--out", "-o", help="Output index JSON file")] = Path("index.json"),
     positions: Annotated[bool, typer.Option("--positions", help="Store token positions")] = False,
     limit: Annotated[int | None, typer.Option("--limit", help="Limit number of docs to index")] = None,
+    workers: Annotated[int, typer.Option("--workers", "-w", min=1, help="Number of workers")] = 1,
+    executor: Annotated[
+        ExecutorKind,
+        typer.Option("--executor", help="How to run build_partial: serial, threads or processes"),
+    ] = DEFAULT_EXECUTOR,
 ) -> None:
     """Build an inverted index from a directory of text files."""
     if not corpus_dir.exists() or not corpus_dir.is_dir():
         err_console.print(f"[red]Error:[/red] Corpus directory '{corpus_dir}' does not exist.")
         raise typer.Exit(code=1)
 
-    files = sorted(list(corpus_dir.glob("*.txt")))
-    if limit is not None:
-        files = files[:limit]
-
-    if not files:
+    paths = list_corpus(corpus_dir, limit)
+    if not paths:
         err_console.print(f"[yellow]Warning:[/yellow] No .txt files found in '{corpus_dir}'.")
         raise typer.Exit(code=1)
 
-    idx = InvertedIndex()
-    for doc_id, file_path in enumerate(track(files, description="Indexing documents...")):
-        try:
-            content = file_path.read_text(encoding="utf-8")
-            idx.add_document(doc_id=doc_id, title=file_path.name, text=content, store_positions=positions)
-        except Exception as e:
-            logging.getLogger(__name__).warning("Failed to read %s: %s", file_path, e)
+    try:
+        with Progress(transient=True) as progress:
+            task = progress.add_task("Indexing documents...", total=None)
+
+            def on_progress(done: int, total: int) -> None:
+                progress.update(task, completed=done, total=total)
+
+            idx, stats = build_index(
+                paths,
+                workers=workers,
+                executor=executor,
+                positions=positions,
+                on_progress=on_progress,
+            )
+    except Exception:
+        # Для processes у __cause__ лежить стек воркера (_RemoteTraceback).
+        err_console.print("[red]Error:[/red] a worker failed, the build was aborted.")
+        err_console.print(traceback.format_exc(), markup=False, highlight=False)
+        raise typer.Exit(code=1)
 
     idx.save(out)
     console.print(f"[green]Successfully indexed {idx.total_docs} documents into {out}[/green]")
+    err_console.print(
+        f"[dim]{stats.executor} x{stats.workers}: wall {stats.wall_seconds:.2f}s, "
+        f"cpu {stats.cpu_seconds:.2f}s, merge {stats.merge_seconds:.2f}s, "
+        f"chunks {stats.chunks}[/dim]"
+    )
 
 
 @app.command()

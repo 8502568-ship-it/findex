@@ -1,6 +1,6 @@
 [project]
 name = "findex"
-version = "0.4.0"
+version = "0.5.0"
 description = "A toy search engine built with modern Python: typed, tested, and packaged CLI."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -20,6 +20,7 @@ dev = [
     "pyright>=1.1.350",
     "ruff>=0.4.0",
     "python-docx>=1.1.0",
+    "matplotlib>=3.8.0",
 ]
 
 [tool.pyright]
@@ -42,3 +43,7 @@ testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from findex.models import DocId, Posting, SearchResult
 from findex.scoring import BM25Scorer, Scorer, TFIDFScorer
-from findex.tokenizer import tokenize
+from findex.tokenize import tokenize
 
 log = logging.getLogger(__name__)
 

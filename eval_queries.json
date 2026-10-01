@@ -1,15 +1,15 @@
 {
-  "demo_query": "whale AND (sea OR ocean) NOT ship \"white whale\"",
+  "demo_query": "whale AND (harpoon OR sea) NOT Tarzan \"white whale\"",
   "queries": [
-    {"q": "white whale captain harpoon", "relevant": ["Moby"]},
-    {"q": "creature monster Frankenstein laboratory", "relevant": ["Frankenstein"]},
-    {"q": "vampire Transylvania Harker", "relevant": ["Dracula"]},
-    {"q": "Holmes Watson detective Baker Street", "relevant": ["Sherlock Holmes", "Baskervilles", "Study in Scarlet", "Sign of the Four"]},
-    {"q": "Alice rabbit hole Wonderland queen", "relevant": ["Alice"]},
-    {"q": "Elizabeth Darcy Bennet Netherfield", "relevant": ["Pride and Prejudice"]},
-    {"q": "Pip convict Estella Havisham", "relevant": ["Great Expectations"]},
-    {"q": "Nautilus Captain Nemo submarine", "relevant": ["Twenty Thousand Leagues"]},
-    {"q": "Jekyll Hyde Utterson potion", "relevant": ["Jekyll"]},
-    {"q": "Odysseus suitors Penelope Ithaca", "relevant": ["Odyssey"]}
+    {"q": "Ahab Ishmael Queequeg whale Pequod", "relevant": ["Moby"]},
+    {"q": "Frankenstein creature Geneva Victor monster", "relevant": ["Frankenstein"]},
+    {"q": "Alice rabbit Queen Hatter Cheshire", "relevant": ["Alice's Adventures", "Looking-Glass"]},
+    {"q": "Jekyll Hyde Utterson Lanyon", "relevant": ["Jekyll"]},
+    {"q": "Nemo Nautilus Aronnax submarine", "relevant": ["Twenty Thousand Leagues"]},
+    {"q": "Holmes Watson Baker Street Lestrade", "relevant": ["Sherlock Holmes"]},
+    {"q": "Tarzan Jane Africa ape Kala", "relevant": ["Tarzan"]},
+    {"q": "Dorothy Toto Scarecrow Tin Woodman Oz", "relevant": ["of Oz"]},
+    {"q": "Huckleberry Tom Sawyer Jim raft Mississippi", "relevant": ["Huckleberry Finn", "Tom Sawyer"]},
+    {"q": "Mars Barsoom Carter Dejah Thoris", "relevant": ["Mars"]}
   ]
 }

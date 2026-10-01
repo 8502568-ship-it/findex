@@ -24,3 +24,4 @@ results_lab3.json
 .venv-*/
 index.json
 index*.json
+*.docx

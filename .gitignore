@@ -17,3 +17,5 @@ data/
 *.pkl
 results.json
 results.md
+index_lab3.pkl
+results_lab3.json

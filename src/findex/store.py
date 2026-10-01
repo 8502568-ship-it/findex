@@ -8,6 +8,7 @@ import struct
 from array import array
 
 from findex.models import DocMeta, MmapIndex, ObjectIndex, Posting
+from findex.util import timed
 
 MAGIC = b"FIDX1"
 
@@ -100,6 +101,7 @@ def save(idx, path, fmt: str = "pickle") -> None:
     {"pickle": save_pickle, "json": save_json, "binary": save_binary}[fmt](idx, path)
 
 
+@timed
 def load(path):
     """Формат визначається за першими байтами файлу."""
     with open(path, "rb") as f:

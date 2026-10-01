@@ -13,8 +13,10 @@ from collections.abc import Iterable
 
 from findex.models import ArrayIndex, DocMeta, ObjectIndex, PlainPosting, Posting
 from findex.pipeline import RawDoc, iter_docs, tokenize
+from findex.util import timed
 
 
+@timed
 def build_index(docs: Iterable[RawDoc], variant: str = "slots",
                 positions: bool = False):
     """variant: 'plain' | 'slots' | 'array'.

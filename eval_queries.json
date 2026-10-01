@@ -1,0 +1,15 @@
+{
+  "demo_query": "whale AND (sea OR ocean) NOT ship \"white whale\"",
+  "queries": [
+    {"q": "white whale captain harpoon", "relevant": ["Moby"]},
+    {"q": "creature monster Frankenstein laboratory", "relevant": ["Frankenstein"]},
+    {"q": "vampire Transylvania Harker", "relevant": ["Dracula"]},
+    {"q": "Holmes Watson detective Baker Street", "relevant": ["Sherlock Holmes", "Baskervilles", "Study in Scarlet", "Sign of the Four"]},
+    {"q": "Alice rabbit hole Wonderland queen", "relevant": ["Alice"]},
+    {"q": "Elizabeth Darcy Bennet Netherfield", "relevant": ["Pride and Prejudice"]},
+    {"q": "Pip convict Estella Havisham", "relevant": ["Great Expectations"]},
+    {"q": "Nautilus Captain Nemo submarine", "relevant": ["Twenty Thousand Leagues"]},
+    {"q": "Jekyll Hyde Utterson potion", "relevant": ["Jekyll"]},
+    {"q": "Odysseus suitors Penelope Ithaca", "relevant": ["Odyssey"]}
+  ]
+}

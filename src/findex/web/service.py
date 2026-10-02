@@ -10,6 +10,7 @@ from typing import Literal
 
 from findex.index import InvertedIndex
 from findex.models import SearchResult
+from findex.semantic import SemanticIndex, embed_query
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,9 +21,15 @@ class WebDocument:
 
 
 class WebSearch:
-    def __init__(self, index: InvertedIndex, documents: dict[int, WebDocument]) -> None:
+    def __init__(
+        self,
+        index: InvertedIndex,
+        documents: dict[int, WebDocument],
+        semantic: SemanticIndex | None = None,
+    ) -> None:
         self.index = index
         self.documents = documents
+        self.semantic = semantic
 
     @classmethod
     def load(cls, index_path: Path, docs_path: Path) -> WebSearch:
@@ -99,6 +106,38 @@ class WebSearch:
         ]
         pages = math.ceil(total / k) if total else 0
         return results, total, pages
+
+    def semantic_search(self, query: str, k: int) -> list[dict[str, object]]:
+        if self.semantic is None:
+            raise RuntimeError("Semantic index is not configured")
+        hits = self.semantic.search(embed_query(query), k=k)
+        return [
+            {
+                "doc_id": hit.doc_id,
+                "title": hit.title,
+                "score": hit.score,
+                "snippet": self._snippet(
+                    SearchResult(hit.doc_id, hit.score, hit.title), query
+                ),
+            }
+            for hit in hits
+        ]
+
+    def hybrid_search(self, query: str, k: int) -> list[dict[str, object]]:
+        if self.semantic is None:
+            raise RuntimeError("Semantic index is not configured")
+        lexical, _, _ = self.search(query, max(k, 50), "bm25", 1)
+        semantic = self.semantic_search(query, max(k, 50))
+        ranks: dict[int, float] = {}
+        for rank, item in enumerate(lexical, 1):
+            doc_id = int(item["doc_id"])
+            ranks[doc_id] = ranks.get(doc_id, 0.0) + 1.0 / (60 + rank)
+        for rank, item in enumerate(semantic, 1):
+            doc_id = int(item["doc_id"])
+            ranks[doc_id] = ranks.get(doc_id, 0.0) + 1.0 / (60 + rank)
+        ordered = sorted(ranks, key=lambda doc_id: (-ranks[doc_id], doc_id))[:k]
+        by_id = {int(x["doc_id"]): x for x in lexical + semantic}
+        return [{**by_id[doc_id], "score": ranks[doc_id]} for doc_id in ordered
 
     def document(self, doc_id: int) -> WebDocument | None:
         return self.documents.get(doc_id)

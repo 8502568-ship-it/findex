@@ -1,15 +1,19 @@
+import asyncio
 import json
 import logging
 import sys
 import traceback
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Annotated, Literal
 
 import typer
 from rich.console import Console
+from rich.live import Live
 from rich.progress import Progress
 from rich.table import Table
 
+from findex.crawler import CrawlStats, crawl
 from findex.index import InvertedIndex
 from findex.parallel import DEFAULT_EXECUTOR, ExecutorKind, build_index, list_corpus
 
@@ -30,6 +34,82 @@ def setup_logging(verbose: int) -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         stream=sys.stderr,
     )
+
+
+def _crawl_log_setup(log_file: Path) -> None:
+    logger = logging.getLogger("findex.crawl")
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(log_file, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(handler)
+
+
+def _write_jsonl(path: Path, row: dict[str, object]) -> None:
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+async def _crawl_command(
+    seed_url: str,
+    *,
+    max_pages: int,
+    concurrency: int,
+    per_host: int,
+    host_delay: float,
+    out: Path,
+    log_file: Path,
+    allowed_domains: list[str] | None,
+) -> CrawlStats:
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    _crawl_log_setup(log_file)
+    stats = CrawlStats()
+    domains = set(allowed_domains or [])
+    if not domains:
+        domains = {urlsplit(seed_url).hostname or ""}
+
+    table = Table(title="findex crawl")
+    table.add_column("Pages", justify="right")
+    table.add_column("Pages/s", justify="right")
+    table.add_column("In flight", justify="right")
+    table.add_column("Errors", justify="right")
+    table.add_column("Queue", justify="right")
+
+    def render() -> Table:
+        table.rows.clear()
+        table.add_row(
+            str(stats.pages), f"{stats.pages_per_second:.2f}",
+            str(stats.in_flight), str(stats.errors), str(stats.queue_depth),
+        )
+        return table
+
+    with Live(render(), refresh_per_second=8, transient=False) as live:
+        async for page in crawl(
+            [seed_url],
+            max_pages=max_pages,
+            concurrency=concurrency,
+            per_host=per_host,
+            host_delay=host_delay,
+            allowed_domains=domains,
+            user_agent=(
+                "findex-lab06/1.0 "
+                "(+https://github.com/8502568-ship-it/findex)"
+            ),
+            stats=stats,
+        ):
+            await asyncio.to_thread(
+                _write_jsonl,
+                out,
+                {
+                    "url": page.url,
+                    "title": page.title,
+                    "text": page.text,
+                    "fetched_at": page.fetched_at,
+                    "status": page.status,
+                    "bytes": page.num_bytes,
+                },
+            )
+            live.update(render())
+    return stats
 
 
 @app.callback()
@@ -91,6 +171,50 @@ def index(
         f"[dim]{stats.executor} x{stats.workers}: wall {stats.wall_seconds:.2f}s, "
         f"cpu {stats.cpu_seconds:.2f}s, merge {stats.merge_seconds:.2f}s, "
         f"chunks {stats.chunks}[/dim]"
+    )
+
+
+@app.command("crawl")
+def crawl_cmd(
+    seed_url: Annotated[str, typer.Argument(help="Starting absolute HTTP(S) URL")],
+    max_pages: Annotated[int, typer.Option("--max-pages", min=1, help="Maximum pages to fetch")] = 500,
+    concurrency: Annotated[int, typer.Option("--concurrency", min=1, help="Number of async workers")] = 10,
+    per_host: Annotated[int, typer.Option("--per-host", min=1, help="Maximum in-flight requests per host")] = 2,
+    host_delay: Annotated[float, typer.Option("--host-delay", min=0.0, help="Minimum seconds between starts on one host")] = 0.1,
+    out: Annotated[Path, typer.Option("--out", "-o", help="Streaming JSONL output")] = Path("data/crawl.jsonl"),
+    log_file: Annotated[Path, typer.Option("--log-file", help="Per-URL crawl log")] = Path("crawl.log"),
+    allowed_domain: Annotated[list[str] | None, typer.Option("--allowed-domain", help="Allowed host; repeat for multiple hosts")] = None,
+) -> None:
+    """Polite asyncio crawler; raw pages stream to JSONL for later indexing."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("", encoding="utf-8")
+    try:
+        stats = asyncio.run(
+            _crawl_command(
+                seed_url,
+                max_pages=max_pages,
+                concurrency=concurrency,
+                per_host=per_host,
+                host_delay=host_delay,
+                out=out,
+                log_file=log_file,
+                allowed_domains=allowed_domain,
+            ),
+            debug=True,
+        )
+    except KeyboardInterrupt:
+        err_console.print("[yellow]Crawl cancelled.[/yellow]")
+        raise typer.Exit(code=130)
+    except Exception as exc:
+        err_console.print(f"[red]Crawl failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+    console.print(
+        f"[green]Crawled {stats.pages} pages[/green] -> {out}; "
+        f"{stats.errors} errors; peak in-flight {stats.peak_in_flight}"
+    )
+    console.print(
+        f"[dim]Index after crawl, outside the event loop: "
+        f"findex index {out} -o index.json[/dim]"
     )
 
 

@@ -173,3 +173,91 @@ uv run pytest
 Закон Амдала. Merge виконується в одному процесі, поки решта чекає. На 8 воркерах він займає 1,01 с, тобто f = 3,5 % від wall serial (28,91 с). За законом Амдала S(N) = 1/(f + (1−f)/N), тому навіть з нескінченною кількістю ядер прискорення не перевищить 1/f = 28,57×; для 8 воркерів формула дає 6,43×, а виміряно 1,42× (див. таблицю 2). Це лише нижня оцінка послідовної частки: в неї не входить десеріалізація результатів воркерів у батьківському процесі і запуск процесів, тому реальна стеля нижча; різницю між формулою і виміром варто пояснити саме цим.
 
 Збірка 3.13t. На вільнопотоковому інтерпретаторі (sys._is_gil_enabled() = False) ті самі ThreadPoolExecutor-потоки дали 2,32× при 8 воркерах (процеси на звичайній збірці — 1,42×). Потоки тепер справді виконують байткод паралельно, не платять за pickle і працюють у спільній пам'яті, тож CPU-час і RSS мають бути ближчими до serial, ніж у processes — звір це з таблицею 1. Merge лишається послідовним, тому Амдал діє й тут. Ціна — повільніший одноядерний інтерпретатор (дивись рядок serial на 3.13t, якщо він є).
+
+
+# Лабораторна 6 — асинхронний crawler (`asyncio`)
+
+## Що додано
+
+- `findex crawl` — асинхронний краулер на `asyncio__, `TaskGroup__, `Queue__, global/per-host semaphores.
+- `httpx.AsyncClient` з одним connection pool на crawl; таймаут через `asyncio.timeout`.
+- Retry тільки для 429, 5xx та timeout; максимум 3 повтори, exponential backoff + jitter; `Retry-After` враховується. Інші 4xx не повторюються.
+- `RobotsCache` окремо кешує `robots.txt` для кожного host; при недоступному robots.txt застосовується fail-closed політика.
+- Чесний User-Agent: `findex-lab06/1.0 (+https://github.com/8502568-ship-it/findex)`.
+- Canonical URL: lowercase scheme/host, без fragment, нормалізований trailing slash і відсортований query.
+- HTML/text/link extraction через стандартний `html.parser`.
+- JSONL пишеться потоком; індексація запускається окремою командою після завершення crawl і не блокує event loop.
+- `crawl.log` містить статус, bytes, elapsed і retry для URL.
+- Тести використовують `httpx.MockTransport`, живої мережі не потребують.
+
+## Дозвіл на crawling
+
+Для здачі використано **локальне дзеркало**, яке запускається скриптом `scripts/lab6_mirror.py` на `127.0.0.1`. Воно створює 220 тестових сторінок і власний `robots.txt`, тому зовнішній сайт не навантажується. Для реального сайту запускати crawler слід лише там, де crawling дозволений власником; robots.txt та domain allowlist обов'язкові.
+
+## Запуск
+
+```bash
+uv sync
+uv run pytest
+uv run ruff check .
+
+# локальний mirror
+uv run python scripts/lab6_mirror.py --port 8765
+
+# в іншому terminal
+uv run findex crawl http://127.0.0.1:8765/page/0 --max-pages 200 --concurrency 20 --per-host 20 --host-delay 0 --out data/crawl.jsonl --log-file crawl.log
+uv run findex index data/crawl.jsonl -o index.json
+uv run findex search index.json "async crawler"
+```
+
+> Якщо локальний `uv.lock` ще не містить нової залежності `httpx`, один раз виконайте `uv lock`, після чого `uv sync`.
+
+## Benchmark Lab 6
+
+Однакова seed-адреса і `max_pages=200`; локальний mirror має затримку 50 ms на HTTP-відповідь. Це контрольований експеримент, а не вимірювання зовнішнього сайту.
+
+| Concurrency | Pages | Wall, s | Pages/s | Errors | Peak RSS, MiB |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 200 | 10.654 | 18.77 | 0 | 103.43 |
+| 5 | 200 | 2.529 | 79.09 | 0 | 103.43 |
+| 20 | 200 | 2.226 | 89.86 | 0 | 103.80 |
+
+Команди benchmark: `uv run python scripts/bench_async.py http://127.0.0.1:8765/page/0 --max-pages 200 --per-host 20 --concurrency N`, окремий запуск для `N=1`, `N=5` та `N=20`.
+
+### Пояснення
+
+**Чому 20 одночасних запитів швидші за Lab 5:** у crawler робота переважно I/O-bound: один потік не виконує CPU-роботу під час очікування socket response, а event loop перемикається на іншу готову coroutine. На контрольному mirror wall time впав з 10.654 s при 1 worker до 2.226 s при 20.
+
+**Ціна per-host limit:** він може зменшити максимальний throughput одного сервера, бо запити чекають semaphore і minimum delay. Ліміт залишений навмисно: він захищає сервер від burst/DoS-подібного навантаження; глобальний semaphore одночасно обмежує загальну кількість in-flight requests.
+
+**Де event loop блокувався б при індексації всередині coroutine:** токенізація, побудова posting dictionaries та інший CPU-bound Python-код не мають `await`, тому один великий документ зайняв би thread event loop і всі інші мережеві задачі чекали б. Тому crawl тільки збирає raw pages; `findex index` виконується після нього.
+
+**Оброблений збій — 429:** retry використовує `Retry-After`. При тесті через MockTransport журнал містив:
+
+```
+WARNING url=https://example.test/fail status=429 attempt=1 retry_in=0.00s
+INFO    url=https://example.test/fail status=200 bytes=2 elapsed=0.001s attempts=2
+```
+
+## Reflection
+
+1. На `await client.get()` coroutine віддає керування event loop; loop чекає readiness socket і відновлює task, коли I/O готове.
+2. Async concurrency cooperative: безпечніше спільний стан між `await`, але небезпечно мати blocking call. Потоки preemptive, тому потребують synchronization primitives частіше.
+3. `time.sleep(1)` блокує весь loop; `await asyncio.sleep(1)` дозволяє іншим tasks працювати.
+4. `async def f()` при виклику створює coroutine object; виконання починається через `await` або task.
+5. `TaskGroup` задає lifetime tasks і при exception скасовує siblings та піднімає `ExceptionGroup`.
+6. Lab 5 індексує CPU-bound Python, де GIL обмежує threads; Lab 6 очікує мережу, тому async перекриває latency.
+7. `CancelledError` спеціально має проходити крізь cleanup; ковтання cancellation ламає structured shutdown.
+8. Global semaphore обмежує весь crawler, per-host — одного сервера; `Retry-After` змінює звичайну оцінку backoff, коли сервер явно задає wait time.
+9. CPU work під час crawl треба винести після crawl або в ProcessPoolExecutor.
+
+## Definition of done
+
+- [x] timeout/retry/backoff/jitter/Retry-After;
+- [x] robots.txt, User-Agent, domain allowlist, per-host + global limits;
+- [x] Queue + TaskGroup + async generator + canonicalization + seen;
+- [x] streaming JSONL + Rich live counters + crawl.log;
+- [x] MockTransport tests; no blocking sleep in crawler;
+- [x] benchmark for 1/5/20 and reflection;
+- [x] local permission/mirror documented;
+- [ ] final git tag `lab-06` — створити після локальної перевірки та push.

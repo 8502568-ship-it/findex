@@ -85,7 +85,9 @@ class NumpyIndex:
 
         ids = np.concatenate(doc_ids_parts)
         vals = np.concatenate(score_parts)
-        unique_ids, inverse = np.unique(ids, return_inverse=True)
+        unique_ids, first_positions, inverse = np.unique(
+            ids, return_index=True, return_inverse=True
+        )
         scores = np.zeros(len(unique_ids), dtype=np.float64)
         np.add.at(scores, inverse, vals)
 
@@ -96,7 +98,7 @@ class NumpyIndex:
             candidates = np.arange(len(scores))
         ordered = sorted(
             candidates,
-            key=lambda i: (-float(scores[i]), int(unique_ids[i])),
+            key=lambda i: (-float(scores[i]), int(first_positions[i])),
         )
         return [
             SearchResult(

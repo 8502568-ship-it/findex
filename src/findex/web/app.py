@@ -133,12 +133,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             results=results,
         )
 
-    @app.get("/search", response_model=SearchResponse)
-    async def search_endpoint(
-        params: SearchParams = Depends(),
-        svc: WebSearch = Depends(get_service),
-    ) -> SearchResponse:
-        return await search_impl(params, svc)
+    if app.state.settings.search_mode == "def":
+
+        @app.get("/search", response_model=SearchResponse)
+        def search_endpoint(
+            params: SearchParams = Depends(),
+            svc: WebSearch = Depends(get_service),
+        ) -> SearchResponse:
+            return search_sync(params, svc)
+
+    else:
+
+        @app.get("/search", response_model=SearchResponse)
+        async def search_endpoint(
+            params: SearchParams = Depends(),
+            svc: WebSearch = Depends(get_service),
+        ) -> SearchResponse:
+            return await search_impl(params, svc)
 
     @app.get("/docs/{doc_id}", response_model=DocumentResponse)
     async def document_endpoint(

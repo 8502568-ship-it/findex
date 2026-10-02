@@ -1,0 +1,8 @@
+services:
+  findex:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      FINDEX_INDEX_PATH: /app/web/demo_index.json
+      FINDEX_DOCS_PATH: /app/web/demo_docs.jsonl

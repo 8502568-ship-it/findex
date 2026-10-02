@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: findex
+    runtime: docker
+    healthCheckPath: /health
+    envVars:
+      - key: FINDEX_INDEX_PATH
+        value: /app/web/demo_index.json
+      - key: FINDEX_DOCS_PATH
+        value: /app/web/demo_docs.jsonl

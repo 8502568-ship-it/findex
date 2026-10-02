@@ -13,6 +13,7 @@ from rich.live import Live
 from rich.progress import Progress
 from rich.table import Table
 
+from findex.corpus import iter_documents
 from findex.crawler import CrawlStats, crawl
 from findex.index import InvertedIndex
 from findex.parallel import DEFAULT_EXECUTOR, ExecutorKind, build_index, list_corpus
@@ -136,8 +137,20 @@ def index(
     ] = DEFAULT_EXECUTOR,
 ) -> None:
     """Build an inverted index from a directory of text files."""
-    if not corpus_dir.exists() or not corpus_dir.is_dir():
-        err_console.print(f"[red]Error:[/red] Corpus directory '{corpus_dir}' does not exist.")
+    if not corpus_dir.exists():
+        err_console.print(f"[red]Error:[/red] Corpus path '{corpus_dir}' does not exist.")
+        raise typer.Exit(code=1)
+
+    if corpus_dir.is_file() and corpus_dir.suffix.lower() == ".jsonl":
+        idx = InvertedIndex()
+        for doc in iter_documents(corpus_dir):
+            idx.add_document(doc.doc_id, Path(doc.path).name, doc.text, positions)
+        idx.save(out)
+        console.print(f"[green]Successfully indexed {idx.total_docs} documents into {out}[/green]")
+        return
+
+    if not corpus_dir.is_dir():
+        err_console.print(f"[red]Error:[/red] Corpus path '{corpus_dir}' is not a directory.")
         raise typer.Exit(code=1)
 
     paths = list_corpus(corpus_dir, limit)

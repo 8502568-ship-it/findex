@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync
+      - run: uv run pytest -q tests/test_numpy.py tests/test_semantic.py tests/test_web.py tests/test_benchmark.py
+      - run: uv run ruff check src/findex/web src/findex/numpy_search.py src/findex/semantic.py scripts/bench_numpy.py

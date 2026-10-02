@@ -266,7 +266,7 @@ INFO    url=https://example.test/fail status=200 bytes=2 elapsed=0.001s attempts
 
 **Версія: 0.7.0 · тег: `lab-07`**
 
-> **Live demo:** _публічна адреса буде вписана сюди після деплою на Render._
+> **Live demo:** https://findex-88lp.onrender.com
 
 ## Запуск
 

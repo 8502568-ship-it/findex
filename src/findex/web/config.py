@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = "info"
+    search_mode: Literal["async", "def"] = "async"
 
 
 @lru_cache

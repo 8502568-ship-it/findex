@@ -20,6 +20,7 @@ from .models import (
     StatsResponse,
 )
 from .service import WebSearch
+from .semantic import SemanticIndex
 
 log = logging.getLogger("findex.web")
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
@@ -41,9 +42,18 @@ async def lifespan(app: FastAPI):
     settings: Settings = app.state.settings
     app.state.web_search = None
     try:
+        semantic = None
+        if (
+            settings.semantic_embeddings_path.exists()
+            and settings.semantic_metadata_path.exists()
+        ):
+            semantic = SemanticIndex.load(
+                settings.semantic_embeddings_path, settings.semantic_metadata_path
+            )
         app.state.web_search = await asyncio.to_thread(
             WebSearch.load, settings.index_path, settings.docs_path
         )
+        app.state.web_search.semantic = semantic
         log.info("index loaded from %s", settings.index_path)
     except Exception as exc:
         app.state.index_error = str(exc)
@@ -81,12 +91,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> SearchResponse:
         if app.state.settings.search_mode == "def":
             return search_sync(params, svc)
-        results, total, pages = await asyncio.to_thread(
-            svc.search, params.q, params.k, params.scorer, params.page
-        )
+        if params.mode == "semantic":
+            results = await asyncio.to_thread(svc.semantic_search, params.q, params.k)
+            total = len(results)
+            pages = 1 if total else 0
+        elif params.mode == "hybrid":
+            results = await asyncio.to_thread(svc.hybrid_search, params.q, params.k)
+            total = len(results)
+            pages = 1 if total else 0
+        else:
+            results, total, pages = await asyncio.to_thread(
+                svc.search, params.q, params.k, params.scorer, params.page
+            )
         return SearchResponse(
             query=params.q,
             scorer=params.scorer,
+            mode=params.mode,
             page=params.page,
             page_size=params.k,
             total=total,
@@ -113,7 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
         if q:
             try:
-                validated = SearchParams(q=q, k=k, page=page, scorer=scorer)
+                validated = SearchParams(q=q, k=k, page=page, scorer=scorer, mode=request.query_params.get("mode", "lexical"))
                 data["response"] = await search_impl(
                     validated, get_service(request)
                 )

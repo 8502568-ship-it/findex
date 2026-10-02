@@ -5,7 +5,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -122,7 +122,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return templates.TemplateResponse(request, "index.html", data)
 
     def search_sync(params: SearchParams, svc: WebSearch) -> SearchResponse:
-        results, total, pages = svc.search(params.q, params.k, params.scorer, params.page)
+        results, total, pages = svc.search(
+            params.q, params.k, params.scorer, params.page
+        )
         return SearchResponse(
             query=params.q,
             scorer=params.scorer,
@@ -137,8 +139,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         @app.get("/search", response_model=SearchResponse)
         def search_endpoint(
-            params: SearchParams = Depends(),
-            svc: WebSearch = Depends(get_service),
+            params: Annotated[SearchParams, Depends()],
+            svc: Annotated[WebSearch, Depends(get_service)],
         ) -> SearchResponse:
             return search_sync(params, svc)
 
@@ -153,7 +155,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/docs/{doc_id}", response_model=DocumentResponse)
     async def document_endpoint(
-        doc_id: int, svc: WebSearch = Depends(get_service)
+        doc_id: int, svc: Annotated[WebSearch, Depends(get_service)]
     ) -> DocumentResponse:
         doc = await asyncio.to_thread(svc.document, doc_id)
         if doc is None:
@@ -161,12 +163,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return DocumentResponse(doc_id=doc.doc_id, title=doc.title, text=doc.text)
 
     @app.get("/stats", response_model=StatsResponse)
-    async def stats_endpoint(svc: WebSearch = Depends(get_service)) -> StatsResponse:
+    async def stats_endpoint(
+        svc: Annotated[WebSearch, Depends(get_service)],
+    ) -> StatsResponse:
         return StatsResponse(**await asyncio.to_thread(svc.stats))
 
     @app.get("/health", response_model=HealthResponse)
     async def health_endpoint(
-        svc: WebSearch | None = Depends(get_optional_service),
+        svc: Annotated[WebSearch | None, Depends(get_optional_service)],
     ) -> HealthResponse:
         if svc is None:
             raise HTTPException(status_code=503, detail="Index is not loaded")

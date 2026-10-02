@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or get_settings()
-    app = FastAPI(title="findex", version="0.7.0", lifespan=lifespan)
+    app = FastAPI(title="findex", version="1.0.0", lifespan=lifespan)
     app.state.settings = cfg
     app.state.web_search = None
     app.state.index_error = None
@@ -86,22 +86,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         return response
 
-    async def search_impl(
-        params: SearchParams, svc: WebSearch
-    ) -> SearchResponse:
-        if app.state.settings.search_mode == "def":
-            return search_sync(params, svc)
+    def search_sync(params: SearchParams, svc: WebSearch) -> SearchResponse:
         if params.mode == "semantic":
-            results = await asyncio.to_thread(svc.semantic_search, params.q, params.k)
+            results = svc.semantic_search(params.q, params.k)
             total = len(results)
             pages = 1 if total else 0
         elif params.mode == "hybrid":
-            results = await asyncio.to_thread(svc.hybrid_search, params.q, params.k)
+            results = svc.hybrid_search(params.q, params.k)
             total = len(results)
             pages = 1 if total else 0
         else:
-            results, total, pages = await asyncio.to_thread(
-                svc.search, params.q, params.k, params.scorer, params.page
+            results, total, pages = svc.search(
+                params.q, params.k, params.scorer, params.page
             )
         return SearchResponse(
             query=params.q,
@@ -113,6 +109,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             pages=pages,
             results=results,
         )
+
+    async def search_impl(
+        params: SearchParams, svc: WebSearch
+    ) -> SearchResponse:
+        return await asyncio.to_thread(search_sync, params, svc)
 
     @app.get("/", response_class=HTMLResponse)
     async def index_page(request: Request):
@@ -140,20 +141,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except Exception as exc:
                 data["error"] = str(exc)
         return templates.TemplateResponse(request, "index.html", data)
-
-    def search_sync(params: SearchParams, svc: WebSearch) -> SearchResponse:
-        results, total, pages = svc.search(
-            params.q, params.k, params.scorer, params.page
-        )
-        return SearchResponse(
-            query=params.q,
-            scorer=params.scorer,
-            page=params.page,
-            page_size=params.k,
-            total=total,
-            pages=pages,
-            results=results,
-        )
 
     if app.state.settings.search_mode == "def":
 

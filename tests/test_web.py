@@ -32,6 +32,7 @@ def test_search_success_with_dependency_override() -> None:
     assert body["total"] == 2
     assert body["pages"] == 2
     assert body["results"][0]["title"] == "Alpha"
+    assert "X-Request-ID" in response.headers
 
 
 def test_search_pagination_returns_second_page() -> None:
@@ -61,6 +62,16 @@ def test_unknown_document_404() -> None:
     with TestClient(app) as client:
         assert client.get("/docs/999").status_code == 404
     app.dependency_overrides.clear()
+
+
+def test_health_200_when_index_loaded() -> None:
+    app = create_app(Settings())
+    app.dependency_overrides[get_service] = fake_service
+    with TestClient(app) as client:
+        response = client.get("/health")
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
 def test_health_503_when_index_not_loaded() -> None:

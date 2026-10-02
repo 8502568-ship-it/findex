@@ -13,6 +13,12 @@ class Settings(BaseSettings):
 
     index_path: Path = Field(default=Path("web/demo_index.json"))
     docs_path: Path = Field(default=Path("web/demo_docs.jsonl"))
+    semantic_embeddings_path: Path = Field(
+        default=Path("web/demo_embeddings.npy")
+    )
+    semantic_metadata_path: Path = Field(
+        default=Path("web/demo_embeddings.json")
+    )
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = "info"

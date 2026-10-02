@@ -148,8 +148,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         @app.get("/search", response_model=SearchResponse)
         async def search_endpoint(
-            params: SearchParams = Depends(),
-            svc: WebSearch = Depends(get_service),
+            params: Annotated[SearchParams, Depends()],
+            svc: Annotated[WebSearch, Depends(get_service)],
         ) -> SearchResponse:
             return await search_impl(params, svc)
 

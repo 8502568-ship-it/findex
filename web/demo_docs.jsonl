@@ -1,0 +1,8 @@
+{"doc_id":0,"title":"Asyncio patterns","text":"Asyncio lets one event loop coordinate many I/O-bound tasks. Coroutines yield at await points while sockets wait for data."}
+{"doc_id":1,"title":"FastAPI search service","text":"FastAPI exposes an HTTP API with validation, dependency injection, lifespan startup and typed response models."}
+{"doc_id":2,"title":"Pydantic validation","text":"Pydantic validates request data at the application boundary and serializes structured response models."}
+{"doc_id":3,"title":"Concurrency and GIL","text":"CPU-bound Python work is affected by the GIL. Threads can help when work blocks, while processes can use multiple CPU cores."}
+{"doc_id":4,"title":"Docker deployment","text":"Docker packages the service with a reproducible environment. A non-root process improves container isolation."}
+{"doc_id":5,"title":"Search ranking","text":"BM25 and TF-IDF rank documents by matching query terms against the inverted index."}
+{"doc_id":6,"title":"HTTP request path","text":"An ASGI server accepts a socket connection, builds a request scope, calls the application and sends the response back to the client."}
+{"doc_id":7,"title":"Web interface","text":"The search page shows snippets, highlighted matches, scores, pagination and links to complete documents."}

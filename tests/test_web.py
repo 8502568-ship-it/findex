@@ -12,10 +12,13 @@ def fake_service() -> WebSearch:
     idx = InvertedIndex()
     idx.add_document(0, "Alpha", "fastapi asyncio search")
     idx.add_document(1, "Beta", "asyncio event loop")
-    return WebSearch(idx, {
-        0: WebDocument(0, "Alpha", "fastapi asyncio search"),
-        1: WebDocument(1, "Beta", "asyncio event loop"),
-    })
+    return WebSearch(
+        idx,
+        {
+            0: WebDocument(0, "Alpha", "fastapi asyncio search"),
+            1: WebDocument(1, "Beta", "asyncio event loop"),
+        },
+    )
 
 
 def test_search_success_with_dependency_override() -> None:
@@ -29,6 +32,18 @@ def test_search_success_with_dependency_override() -> None:
     assert body["total"] == 2
     assert body["pages"] == 2
     assert body["results"][0]["title"] == "Alpha"
+
+
+def test_search_pagination_returns_second_page() -> None:
+    app = create_app(Settings())
+    app.dependency_overrides[get_service] = fake_service
+    with TestClient(app) as client:
+        response = client.get("/search?q=asyncio&k=1&page=2")
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["page"] == 2
+    assert body["results"][0]["title"] == "Beta"
 
 
 def test_search_validation_422() -> None:

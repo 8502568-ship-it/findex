@@ -137,7 +137,7 @@ class WebSearch:
             ranks[doc_id] = ranks.get(doc_id, 0.0) + 1.0 / (60 + rank)
         ordered = sorted(ranks, key=lambda doc_id: (-ranks[doc_id], doc_id))[:k]
         by_id = {int(x["doc_id"]): x for x in lexical + semantic}
-        return [{**by_id[doc_id], "score": ranks[doc_id]} for doc_id in ordered
+        return [{**by_id[doc_id], "score": ranks[doc_id]} for doc_id in ordered]
 
     def document(self, doc_id: int) -> WebDocument | None:
         return self.documents.get(doc_id)

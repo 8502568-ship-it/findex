@@ -53,7 +53,7 @@ class NumpyIndex:
         k: int = 10,
         scorer: ScorerName = "bm25",
     ) -> list[SearchResult]:
-        terms = list(dict.fromkeys(tokenize(query)))
+        terms = list(tokenize(query))
         if not terms or self.total_docs == 0:
             return []
 

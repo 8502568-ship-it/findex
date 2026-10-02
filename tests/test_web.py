@@ -27,7 +27,8 @@ def test_search_success_with_dependency_override() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 2
-    assert body["results"][0]["title"] == "Beta"
+    assert body["pages"] == 2
+    assert body["results"][0]["title"] == "Alpha"
 
 
 def test_search_validation_422() -> None:

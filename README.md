@@ -261,3 +261,85 @@ INFO    url=https://example.test/fail status=200 bytes=2 elapsed=0.001s attempts
 - [x] benchmark for 1/5/20 and reflection;
 - [x] local permission/mirror documented;
 - [ ] final git tag `lab-06` — створити після локальної перевірки та push.
+
+# Лабораторна 7 — FastAPI web search
+
+**Версія: 0.7.0 · тег: `lab-07`**
+
+> **Live demo:** _публічна адреса буде вписана сюди після деплою на Render._
+
+## Запуск
+
+```bash
+uv sync
+FINDEX_INDEX_PATH=web/demo_index.json FINDEX_DOCS_PATH=web/demo_docs.jsonl uv run findex serve --port 8000
+```
+
+Windows PowerShell:
+
+```powershell
+$env:FINDEX_INDEX_PATH="web/demo_index.json"
+$env:FINDEX_DOCS_PATH="web/demo_docs.jsonl"
+uv run findex serve --port 8000
+```
+
+Docker:
+
+```bash
+docker build -t findex:0.7.0 .
+docker run --rm -p 8000:8000 -e FINDEX_INDEX_PATH=/app/web/demo_index.json -e FINDEX_DOCS_PATH=/app/web/demo_docs.jsonl findex:0.7.0
+```
+
+## HTTP API
+
+- `GET /` — Jinja2 search page with snippets, highlighting, scores and pagination.
+- `GET /search?q=asyncio&k=10&scorer=bm25&page=1` — paginated JSON search.
+- `GET /docs/{doc_id}` — full document, 404 for an unknown id.
+- `GET /stats` — index statistics.
+- `GET /health` — 200 after the index is loaded, otherwise 503.
+
+`lifespan` loads the index once. Pydantic models validate HTTP input and serialize responses; internal search remains on the Lab 2–3 dataclasses. CPU-bound synchronous search is executed with `asyncio.to_thread`, so the event loop is not blocked by that work. Unexpected exceptions are logged with `X-Request-ID` and exposed as a generic 500 response.
+
+## ASGI path and def vs async def
+
+Socket → Uvicorn/ASGI → request scope → FastAPI routing/dependencies → endpoint → response serialization → ASGI send → socket.
+
+An `async def` endpoint can yield control at `await` points. A normal `def` endpoint is run by Starlette in a thread pool, keeping blocking synchronous code away from the event loop. Here the search core remains synchronous CPU work, so the async endpoint uses `asyncio.to_thread`.
+
+## Тести
+
+Web acceptance tests use FastAPI `TestClient` and `dependency_overrides`; no real index file is needed. Covered cases: successful search, Pydantic 422, unknown document 404, and unloaded-index health 503.
+
+```bash
+uv run pytest tests/test_web.py
+```
+
+## Load test
+
+The reproducible helper for 20 concurrent `/search` requests is:
+
+```bash
+uv run python scripts/bench_web.py http://127.0.0.1:8000/search --requests 20 --mode async
+uv run python scripts/bench_web.py http://127.0.0.1:8000/search --requests 20 --mode def
+```
+
+| Variant | Requests/s | p50 | p95 | p99 |
+|---|---:|---:|---:|---:|
+| 1 worker, async def | pending measurement | pending | pending | pending |
+| 1 worker, def | pending measurement | pending | pending | pending |
+| 4 workers | pending measurement | pending | pending | pending |
+| deployed service | pending deployment | pending | pending | pending |
+
+The final table must contain measured `oha` results on the local and deployed services. Lab 5 showed that pure-Python CPU indexing is constrained by the GIL; moving work to a thread pool keeps the event loop responsive but does not remove the GIL. Multiple Uvicorn worker processes provide separate interpreters and can use multiple CPU cores, with additional memory/process overhead.
+
+## Docker and deployment
+
+The image is multi-stage and uses `uv.lock`. The final process runs as UID/GID 65532 rather than root. `render.yaml` configures a Render Docker service and `/health` health check. Runtime paths are environment variables (`FINDEX_INDEX_PATH`, `FINDEX_DOCS_PATH`).
+
+## Reflection
+
+1. The event loop switches at explicit `await` points.
+2. Pydantic rejects invalid HTTP input at the boundary while internal dataclasses stay simple.
+3. `to_thread` prevents synchronous search from monopolizing the event-loop thread; it does not remove the GIL.
+4. Multiple processes provide separate interpreters/GILs for CPU-bound work.
+5. `lifespan` loads the index once per worker instead of once per request.

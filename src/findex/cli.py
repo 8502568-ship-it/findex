@@ -188,6 +188,50 @@ def index(
     )
 
 
+@app.command("embed")
+def embed(
+    corpus_dir: Annotated[Path, typer.Argument(help="Path to folder with text documents")],
+    output: Annotated[Path, typer.Option("--output", "-o", help="Output .npy embedding matrix")] = Path("semantic_embeddings.npy"),
+    metadata: Annotated[Path, typer.Option("--metadata", help="Output JSON metadata for embedding rows")] = Path("semantic_embeddings.json"),
+    model: Annotated[str, typer.Option("--model", help="Sentence-transformers model name")] = "sentence-transformers/all-MiniLM-L6-v2",
+) -> None:
+    """Build normalized semantic embeddings for a text corpus."""
+    if not corpus_dir.exists():
+        err_console.print(f"[red]Error:[/red] Corpus path '{corpus_dir}' does not exist.")
+        raise typer.Exit(code=1)
+    if not corpus_dir.is_dir() and corpus_dir.suffix.lower() != ".jsonl":
+        err_console.print(
+            f"[red]Error:[/red] Corpus path '{corpus_dir}' is not a directory or JSONL file."
+        )
+        raise typer.Exit(code=1)
+
+    documents = [
+        (doc.doc_id, doc.path.name, doc.text)
+        for doc in iter_documents(corpus_dir)
+    ]
+    if not documents:
+        err_console.print("[red]Error:[/red] No documents found.")
+        raise typer.Exit(code=1)
+
+    console.print(
+        f"[cyan]Embedding {len(documents)} documents with {model}...[/cyan]"
+    )
+    try:
+        build_embeddings(
+            documents,
+            output=output,
+            metadata_path=metadata,
+            model_name=model,
+        )
+    except Exception as exc:
+        err_console.print(f"[red]Embedding failed:[/red] {exc}")
+        raise typer.Exit(code=1)
+
+    console.print(
+        f"[green]Semantic index written to {output} and {metadata}[/green]"
+    )
+
+
 @app.command("crawl")
 def crawl_cmd(
     seed_url: Annotated[str, typer.Argument(help="Starting absolute HTTP(S) URL")],

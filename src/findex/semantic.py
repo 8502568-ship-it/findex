@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from functools import lru_cache
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,12 +120,23 @@ def build_embeddings(
     )
 
 
-def embed_query(query: str, model_name: str = "sentence-transformers/all-MiniLM-L6-v2") -> np.ndarray:
+@lru_cache(maxsize=2)
+def _model(model_name: str):
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
         raise RuntimeError(
             "Semantic search requires sentence-transformers; install the semantic extra."
         ) from exc
-    model = SentenceTransformer(model_name)
-    return np.asarray(model.encode([query], normalize_embeddings=True)[0], dtype=np.float32)
+    return SentenceTransformer(model_name)
+
+
+def embed_query(
+    query: str,
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+) -> np.ndarray:
+    model = _model(model_name)
+    return np.asarray(
+        model.encode([query], normalize_embeddings=True)[0],
+        dtype=np.float32,
+    )

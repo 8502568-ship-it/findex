@@ -33,6 +33,12 @@ dev = [
 [project.optional-dependencies]
 semantic = ["sentence-transformers>=3.0.0"]
 
+[dependency-groups]
+profiling = [
+    "py-spy>=0.4.0",
+    "scalene>=1.5.50",
+]
+
 [tool.pyright]
 include = ["src", "tests"]
 typeCheckingMode = "strict"

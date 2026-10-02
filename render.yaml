@@ -8,3 +8,7 @@ services:
         value: /app/web/demo_index.json
       - key: FINDEX_DOCS_PATH
         value: /app/web/demo_docs.jsonl
+      - key: FINDEX_SEMANTIC_EMBEDDINGS_PATH
+        value: /app/web/demo_embeddings.npy
+      - key: FINDEX_SEMANTIC_METADATA_PATH
+        value: /app/web/demo_embeddings.json

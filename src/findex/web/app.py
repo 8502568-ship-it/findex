@@ -11,6 +11,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from findex.semantic import SemanticIndex
+
 from .config import Settings, get_settings
 from .models import (
     DocumentResponse,
@@ -20,7 +22,6 @@ from .models import (
     StatsResponse,
 )
 from .service import WebSearch
-from .semantic import SemanticIndex
 
 log = logging.getLogger("findex.web")
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
@@ -54,7 +55,11 @@ async def lifespan(app: FastAPI):
             WebSearch.load, settings.index_path, settings.docs_path
         )
         app.state.web_search.semantic = semantic
-        log.info("index loaded from %s", settings.index_path)
+        log.info(
+            "index loaded from %s; semantic=%s",
+            settings.index_path,
+            semantic is not None,
+        )
     except Exception as exc:
         app.state.index_error = str(exc)
         log.error("index load failed: %s", exc)
@@ -134,7 +139,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
         if q:
             try:
-                validated = SearchParams(q=q, k=k, page=page, scorer=scorer, mode=request.query_params.get("mode", "lexical"))
+                validated = SearchParams(
+                    q=q,
+                    k=k,
+                    page=page,
+                    scorer=scorer,
+                    mode=request.query_params.get("mode", "lexical"),
+                )
                 data["response"] = await search_impl(
                     validated, get_service(request)
                 )

@@ -21,6 +21,16 @@ def test_numpy_matches_python_order_and_scores() -> None:
             assert abs(left.score - right.score) < 1e-9
 
 
+def test_numpy_preserves_python_tie_order() -> None:
+    idx = InvertedIndex()
+    idx.add_document(10, "A", "alpha")
+    idx.add_document(2, "B", "alpha")
+    np_idx = NumpyIndex.from_index(idx)
+    expected = idx.search("alpha", k=2)
+    actual = np_idx.search("alpha", k=2)
+    assert [r.doc_id for r in actual] == [r.doc_id for r in expected]
+
+
 def test_numpy_storage_is_int32() -> None:
     idx = make_index()
     np_idx = NumpyIndex.from_index(idx)

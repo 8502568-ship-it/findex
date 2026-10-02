@@ -330,7 +330,7 @@ For the `def` row, `FINDEX_SEARCH_MODE=def` selects a real synchronous FastAPI e
 | 1 worker, async def | 90.96 | 181.13 ms | 199.93 ms | 211.52 ms |
 | 1 worker, def | 98.15 | 146.83 ms | 162.86 ms | 167.51 ms |
 | 4 workers, async def | 97.16 | 159.54 ms | 179.51 ms | 180.55 ms |
-| deployed service | 25.54 | 423.27 ms | 441.22 ms | 448.63 ms |
+| deployed service | 25.82 | 286.59 ms | 385.51 ms | 425.69 ms |
 
 The final table must contain measured `oha` results on the local and deployed services. Lab 5 showed that pure-Python CPU indexing is constrained by the GIL; moving work to a thread pool keeps the event loop responsive but does not remove the GIL. Multiple Uvicorn worker processes provide separate interpreters and can use multiple CPU cores, with additional memory/process overhead.
 

@@ -79,6 +79,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def search_impl(
         params: SearchParams, svc: WebSearch
     ) -> SearchResponse:
+        if app.state.settings.search_mode == "def":
+            return search_sync(params, svc)
         results, total, pages = await asyncio.to_thread(
             svc.search, params.q, params.k, params.scorer, params.page
         )
@@ -118,6 +120,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except Exception as exc:
                 data["error"] = str(exc)
         return templates.TemplateResponse(request, "index.html", data)
+
+    def search_sync(params: SearchParams, svc: WebSearch) -> SearchResponse:
+        results, total, pages = svc.search(params.q, params.k, params.scorer, params.page)
+        return SearchResponse(
+            query=params.q,
+            scorer=params.scorer,
+            page=params.page,
+            page_size=params.k,
+            total=total,
+            pages=pages,
+            results=results,
+        )
 
     @app.get("/search", response_model=SearchResponse)
     async def search_endpoint(

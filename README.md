@@ -316,19 +316,21 @@ uv run pytest tests/test_web.py
 
 ## Load test
 
-The reproducible helper for 20 concurrent `/search` requests is:
+The reproducible helper was used with 50 concurrent local requests and 20 requests against the deployed service:
 
 ```bash
-uv run python scripts/bench_web.py http://127.0.0.1:8000/search --requests 20 --mode async
-uv run python scripts/bench_web.py http://127.0.0.1:8000/search --requests 20 --mode def
+uv run python scripts/bench_web.py http://127.0.0.1:8000/search --requests 50 --mode async
+uv run python scripts/bench_web.py https://findex-88lp.onrender.com/search --requests 20 --mode async
 ```
+
+For the `def` row, `FINDEX_SEARCH_MODE=def` selects a real synchronous FastAPI endpoint; the benchmark client still uses the same async concurrent load so the server implementations are compared under the same client-side load.
 
 | Variant | Requests/s | p50 | p95 | p99 |
 |---|---:|---:|---:|---:|
-| 1 worker, async def | pending measurement | pending | pending | pending |
-| 1 worker, def | pending measurement | pending | pending | pending |
-| 4 workers | pending measurement | pending | pending | pending |
-| deployed service | pending deployment | pending | pending | pending |
+| 1 worker, async def | 90.96 | 181.13 ms | 199.93 ms | 211.52 ms |
+| 1 worker, def | 98.15 | 146.83 ms | 162.86 ms | 167.51 ms |
+| 4 workers, async def | 97.16 | 159.54 ms | 179.51 ms | 180.55 ms |
+| deployed service | 25.54 | 423.27 ms | 441.22 ms | 448.63 ms |
 
 The final table must contain measured `oha` results on the local and deployed services. Lab 5 showed that pure-Python CPU indexing is constrained by the GIL; moving work to a thread pool keeps the event loop responsive but does not remove the GIL. Multiple Uvicorn worker processes provide separate interpreters and can use multiple CPU cores, with additional memory/process overhead.
 

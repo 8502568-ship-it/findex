@@ -17,6 +17,7 @@ from findex.corpus import iter_documents
 from findex.crawler import CrawlStats, crawl
 from findex.index import InvertedIndex
 from findex.parallel import DEFAULT_EXECUTOR, ExecutorKind, build_index, list_corpus
+from findex.semantic import SemanticIndex, build_embeddings, embed_query
 
 app = typer.Typer(help="findex: Modern Search Engine CLI")
 console = Console()
@@ -237,6 +238,7 @@ def search(
     query: Annotated[str, typer.Argument(help="Search query")],
     k: Annotated[int, typer.Option("--k", help="Number of results to return")] = 10,
     scorer: Annotated[Literal["bm25", "tfidf"], typer.Option("--scorer", help="Ranking scorer")] = "bm25",
+    mode: Annotated[Literal["lexical", "semantic", "hybrid"], typer.Option("--mode", help="Search mode")] = "lexical",
     as_json: Annotated[bool, typer.Option("--json", help="Emit raw JSON lines to stdout")] = False,
 ) -> None:
     """Search an index for a query with BM25 or TF-IDF ranking."""
@@ -249,7 +251,30 @@ def search(
         err_console.print(f"[red]Error loading index:[/red] {e}")
         raise typer.Exit(code=1)
 
-    results = idx.search(query=query, k=k, scorer_name=scorer)
+    if mode == "lexical":
+        results = idx.search(query=query, k=k, scorer_name=scorer)
+    else:
+        embeddings = Path("semantic_embeddings.npy")
+        metadata = Path("semantic_embeddings.json")
+        if not embeddings.exists() or not metadata.exists():
+            err_console.print("[red]Semantic index not found.[/red] Run `findex embed ...` first.")
+            raise typer.Exit(code=1)
+        sem = SemanticIndex.load(embeddings, metadata)
+        semantic_hits = sem.search(embed_query(query), k=max(k, 50))
+        if mode == "semantic":
+            from findex.models import SearchResult
+            results = [SearchResult(h.doc_id, h.score, h.title, "") for h in semantic_hits[:k]]
+        else:
+            from findex.models import SearchResult
+            lexical = idx.search(query=query, k=max(k, 50), scorer_name=scorer)
+            ranks: dict[int, float] = {}
+            for rank, item in enumerate(lexical, 1):
+                ranks[item.doc_id] = ranks.get(item.doc_id, 0.0) + 1.0 / (60 + rank)
+            for rank, item in enumerate(semantic_hits, 1):
+                ranks[item.doc_id] = ranks.get(item.doc_id, 0.0) + 1.0 / (60 + rank)
+            by_id = {r.doc_id: r for r in lexical}
+            by_id.update({h.doc_id: SearchResult(h.doc_id, h.score, h.title, "") for h in semantic_hits})
+            results = [by_id[doc_id] for doc_id in sorted(ranks, key=lambda d: (-ranks[d], d))[:k]]
 
     if as_json:
         for r in results:

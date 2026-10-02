@@ -89,14 +89,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return await search_impl(params, svc)
 
     @app.get("/docs/{doc_id}", response_model=DocumentResponse)
-    async def document_endpoint(doc_id: int, svc: WebSearch = Depends(service)) -> DocumentResponse:
+    async def document_endpoint(doc_id: int, svc: WebSearch = Depends(get_service)) -> DocumentResponse:
         doc = await asyncio.to_thread(svc.document, doc_id)
         if doc is None:
             raise HTTPException(status_code=404, detail="Document not found")
         return DocumentResponse(doc_id=doc.doc_id, title=doc.title, text=doc.text)
 
     @app.get("/stats", response_model=StatsResponse)
-    async def stats_endpoint(svc: WebSearch = Depends(service)) -> StatsResponse:
+    async def stats_endpoint(svc: WebSearch = Depends(get_service)) -> StatsResponse:
         return StatsResponse(**await asyncio.to_thread(svc.stats))
 
     @app.get("/health", response_model=HealthResponse)

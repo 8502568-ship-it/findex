@@ -269,6 +269,19 @@ def search(
 
 
 @app.command()
+def serve(
+    port: Annotated[int, typer.Option("--port", min=1, max=65535, help="HTTP port")] = 8000,
+    workers: Annotated[int, typer.Option("--workers", min=1, help="Uvicorn worker processes")] = 1,
+) -> None:
+    """Run the FastAPI web search application with Uvicorn."""
+    import uvicorn
+    from findex.web.config import get_settings
+
+    settings = get_settings()
+    uvicorn.run("findex.web.app:app", host=settings.host, port=port, workers=workers, log_level=settings.log_level)
+
+
+@app.command()
 def stats(
     index_file: Annotated[Path, typer.Argument(help="Path to the saved index JSON file")],
 ) -> None:

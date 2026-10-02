@@ -7,7 +7,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="FINDEX_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="FINDEX_", env_file=".env", extra="ignore"
+    )
 
     index_path: Path = Field(default=Path("web/demo_index.json"))
     docs_path: Path = Field(default=Path("web/demo_docs.jsonl"))

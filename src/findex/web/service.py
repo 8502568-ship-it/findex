@@ -34,7 +34,10 @@ class WebSearch:
                 doc_id = int(row["doc_id"])
                 documents[doc_id] = WebDocument(
                     doc_id=doc_id,
-                    title=str(row.get("title") or index.doc_titles.get(doc_id, f"Doc {doc_id}")),
+                    title=str(
+                        row.get("title")
+                        or index.doc_titles.get(doc_id, f"Doc {doc_id}")
+                    ),
                     text=str(row.get("text", "")),
                 )
         return cls(index, documents)
@@ -47,7 +50,11 @@ class WebSearch:
         if not text:
             return ""
         terms = [re.escape(t) for t in query.split() if t]
-        match = re.search(r"(" + "|".join(terms) + r")", text, re.IGNORECASE) if terms else None
+        match = (
+            re.search(r"(" + "|".join(terms) + r")", text, re.IGNORECASE)
+            if terms
+            else None
+        )
         start = max(0, (match.start() - 90) if match else 0)
         end = min(len(text), start + 260)
         snippet = html.escape(text[start:end])
@@ -56,7 +63,7 @@ class WebSearch:
             if safe_terms:
                 snippet = re.sub(
                     r"(" + "|".join(safe_terms) + r")",
-                    r"<mark>\\1</mark>",
+                    r"<mark>\1</mark>",
                     snippet,
                     flags=re.IGNORECASE,
                 )
@@ -64,15 +71,27 @@ class WebSearch:
         suffix = "…" if end < len(text) else ""
         return prefix + snippet + suffix
 
-    def search(self, query: str, k: int, scorer: Literal["bm25", "tfidf"], page: int) -> tuple[list[dict[str, object]], int, int]:
-        ranked = self.index.search(query=query, k=1000, scorer_name=scorer)
+    def search(
+        self,
+        query: str,
+        k: int,
+        scorer: Literal["bm25", "tfidf"],
+        page: int,
+    ) -> tuple[list[dict[str, object]], int, int]:
+        ranked = self.index.search(
+            query=query,
+            k=max(self.index.total_docs, 1),
+            scorer_name=scorer,
+        )
         total = len(ranked)
         start = (page - 1) * k
         page_results = ranked[start : start + k]
         results = [
             {
                 "doc_id": r.doc_id,
-                "title": self.documents.get(r.doc_id, WebDocument(r.doc_id, r.title, "")).title,
+                "title": self.documents.get(
+                    r.doc_id, WebDocument(r.doc_id, r.title, "")
+                ).title,
                 "score": r.score,
                 "snippet": self._snippet(r, query),
             }

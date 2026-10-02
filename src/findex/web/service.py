@@ -25,7 +25,7 @@ class WebSearch:
         self.documents = documents
 
     @classmethod
-    def load(cls, index_path: Path, docs_path: Path) -> "WebSearch":
+    def load(cls, index_path: Path, docs_path: Path) -> WebSearch:
         index = InvertedIndex.load(index_path)
         documents: dict[int, WebDocument] = {}
         with docs_path.open(encoding="utf-8") as fh:

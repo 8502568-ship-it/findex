@@ -19,6 +19,17 @@ log = logging.getLogger("findex.web")
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
 
 
+def get_service(request: Request) -> WebSearch:
+    loaded = getattr(request.app.state, "web_search", None)
+    if loaded is None:
+        raise HTTPException(status_code=503, detail="Index is not loaded")
+    return loaded
+
+
+def get_optional_service(request: Request) -> WebSearch | None:
+    return getattr(request.app.state, "web_search", None)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings: Settings = app.state.settings
@@ -51,15 +62,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         return response
 
-    def service(request: Request) -> WebSearch:
-        loaded = getattr(request.app.state, "web_search", None)
-        if loaded is None:
-            raise HTTPException(status_code=503, detail="Index is not loaded")
-        return loaded
-
-    def optional_service(request: Request) -> WebSearch | None:
-        return getattr(request.app.state, "web_search", None)
-
     async def search_impl(params: SearchParams, svc: WebSearch) -> SearchResponse:
         results, total, pages = await asyncio.to_thread(svc.search, params.q, params.k, params.scorer, params.page)
         return SearchResponse(query=params.q, scorer=params.scorer, page=params.page, page_size=params.k, total=total, pages=pages, results=results)
@@ -77,13 +79,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if q:
             try:
                 validated = SearchParams(q=q, k=k, page=page, scorer=scorer)
-                data["response"] = await search_impl(validated, service(request))
+                data["response"] = await search_impl(validated, get_service(request))
             except Exception as exc:
                 data["error"] = str(exc)
         return templates.TemplateResponse(request, "index.html", data)
 
     @app.get("/search", response_model=SearchResponse)
-    async def search_endpoint(params: SearchParams = Depends(), svc: WebSearch = Depends(service)) -> SearchResponse:
+    async def search_endpoint(params: SearchParams = Depends(), svc: WebSearch = Depends(get_service)) -> SearchResponse:
         return await search_impl(params, svc)
 
     @app.get("/docs/{doc_id}", response_model=DocumentResponse)
@@ -98,7 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return StatsResponse(**await asyncio.to_thread(svc.stats))
 
     @app.get("/health", response_model=HealthResponse)
-    async def health_endpoint(svc: WebSearch | None = Depends(optional_service)) -> HealthResponse:
+    async def health_endpoint(svc: WebSearch | None = Depends(get_optional_service)) -> HealthResponse:
         if svc is None:
             raise HTTPException(status_code=503, detail="Index is not loaded")
         return HealthResponse(status="ok")

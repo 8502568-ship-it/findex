@@ -9,6 +9,7 @@ class SearchParams(BaseModel):
     q: str = Field(min_length=1, max_length=200)
     k: int = Field(default=10, ge=1, le=100)
     scorer: Literal["bm25", "tfidf"] = "bm25"
+    mode: Literal["lexical", "semantic", "hybrid"] = "lexical"
     page: int = Field(default=1, ge=1, le=10000)
 
 
@@ -22,6 +23,7 @@ class SearchItem(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     scorer: Literal["bm25", "tfidf"]
+    mode: Literal["lexical", "semantic", "hybrid"]
     page: int
     page_size: int
     total: int

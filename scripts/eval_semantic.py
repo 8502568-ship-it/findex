@@ -41,7 +41,10 @@ def main() -> None:
             "relevant": ["Frankenstein"],
         },
         {
-            "q": "a child wanders through an absurd realm where authority figures behave strangely",
+            "q": (
+                "a child wanders through an absurd realm where "
+                "authority figures behave strangely"
+            ),
             "relevant": ["Alice's Adventures", "Looking-Glass"],
         },
         {
@@ -49,7 +52,10 @@ def main() -> None:
             "relevant": ["Jekyll"],
         },
         {
-            "q": "an Earth traveler explores a hostile alien world and becomes involved with a local royal figure",
+            "q": (
+                "an Earth traveler explores a hostile alien world "
+                "and becomes involved with a local royal figure"
+            ),
             "relevant": ["Mars"],
         },
     ]
@@ -73,7 +79,10 @@ def main() -> None:
                 display = titles.get(result.doc_id, result.title)
                 print(f"  {rank}. {display} [{result.title}] ({result.score:.4f})")
 
-    print(f"\nMean Precision@5 ({len(scores)} queries): {sum(scores) / len(scores):.3f}")
+    print(
+        f"\nMean Precision@5 ({len(scores)} queries): "
+        f"{sum(scores) / len(scores):.3f}"
+    )
 
 
 if __name__ == "__main__":

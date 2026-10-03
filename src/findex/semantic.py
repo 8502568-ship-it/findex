@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
-
 from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 
@@ -33,7 +32,7 @@ class SemanticIndex:
         self.titles = titles
 
     @classmethod
-    def load(cls, embeddings_path: Path, metadata_path: Path) -> "SemanticIndex":
+    def load(cls, embeddings_path: Path, metadata_path: Path) -> SemanticIndex:
         embeddings = np.load(embeddings_path, mmap_mode="r")
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         return cls(
@@ -89,7 +88,8 @@ def build_embeddings(
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
         raise RuntimeError(
-            "Semantic search requires sentence-transformers; install the semantic extra."
+            "Semantic search requires sentence-transformers; "
+            "install the semantic extra."
         ) from exc
 
     texts: list[str] = []

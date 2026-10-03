@@ -61,8 +61,8 @@ def main() -> None:
     ]
 
     index = SemanticIndex.load(
-        Path("semantic_embeddings.npy"),
-        Path("semantic_embeddings.json"),
+        Path("web/demo_embeddings.npy"),
+        Path("web/demo_embeddings.json"),
     )
     titles = corpus_titles(Path("data/gutenberg"))
 

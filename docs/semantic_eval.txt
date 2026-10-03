@@ -1,0 +1,123 @@
+=== Semantic Precision@5 ===
+
+[lab3] Ahab Ishmael Queequeg whale Pequod
+P@5=0.20 | relevant=['Moby']
+  1. Moby-Dick; or, The Whale [pg15.txt] (0.5427)
+  2. Twenty Thousand Leagues under the Sea [pg164.txt] (0.4336)
+  3. The Bible, King James Version, Complete [pg30.txt] (0.4021)
+  4. Three hundred Aesop’s fables [pg21.txt] (0.3614)
+  5. The Arabian Nights Entertainments [pg128.txt] (0.3558)
+
+[lab3] Frankenstein creature Geneva Victor monster
+P@5=0.20 | relevant=['Frankenstein']
+  1. Frankenstein; or, the modern prometheus [pg84.txt] (0.4995)
+  2. Twenty Thousand Leagues under the Sea [pg164.txt] (0.4061)
+  3. The Lost World [pg139.txt] (0.4031)
+  4. The Monster Men [pg96.txt] (0.4011)
+  5. Les Misérables [pg135.txt] (0.3876)
+
+[lab3] Alice rabbit Queen Hatter Cheshire
+P@5=0.40 | relevant=["Alice's Adventures", 'Looking-Glass']
+  1. Alice's Adventures in Wonderland [pg11.txt] (0.4949)
+  2. Through the Looking-Glass [pg12.txt] (0.4425)
+  3. Anne of Green Gables [pg45.txt] (0.4206)
+  4. Ivanhoe: A Romance [pg82.txt] (0.3881)
+  5. Anne of Avonlea [pg47.txt] (0.3855)
+
+[lab3] Jekyll Hyde Utterson Lanyon
+P@5=0.40 | relevant=['Jekyll']
+  1. The strange case of Dr. Jekyll and Mr. Hyde [pg43.txt] (0.6333)
+  2. The strange case of Dr. Jekyll and Mr. Hyde [pg42.txt] (0.5355)
+  3. The island of Doctor Moreau [pg159.txt] (0.4077)
+  4. The Damnation of Theron Ware [pg133.txt] (0.4070)
+  5. Big Dummy's Guide to the Internet [pg118.txt] (0.3914)
+
+[lab3] Nemo Nautilus Aronnax submarine
+P@5=0.20 | relevant=['Twenty Thousand Leagues']
+  1. Twenty Thousand Leagues under the Sea [pg164.txt] (0.5418)
+  2. The 1991 CIA World Factbook [pg25.txt] (0.4164)
+  3. Moby-Dick; or, The Whale [pg15.txt] (0.3630)
+  4. The gods of Mars [pg64.txt] (0.3526)
+  5. The Complete Works of William Shakespeare [pg100.txt] (0.3513)
+
+[lab3] Holmes Watson Baker Street Lestrade
+P@5=0.40 | relevant=['Sherlock Holmes']
+  1. The Return of Sherlock Holmes [pg221.txt] (0.5400)
+  2. The Return of Sherlock Holmes [pg108.txt] (0.5286)
+  3. The Project Gutenberg Encyclopedia, Volume 1 of 28 [pg200.txt] (0.4193)
+  4. Violists [pg112.txt] (0.3642)
+  5. Mansfield Park [pg141.txt] (0.3576)
+
+[lab3] Tarzan Jane Africa ape Kala
+P@5=1.00 | relevant=['Tarzan']
+  1. The Beasts of Tarzan [pg85.txt] (0.5767)
+  2. Jungle Tales of Tarzan [pg106.txt] (0.5725)
+  3. Tarzan of the Apes [pg78.txt] (0.5581)
+  4. Tarzan and the Jewels of Opar [pg92.txt] (0.5486)
+  5. The Return of Tarzan [pg81.txt] (0.5306)
+
+[lab3] Dorothy Toto Scarecrow Tin Woodman Oz
+P@5=0.40 | relevant=['of Oz']
+  1. The Wonderful Wizard of Oz [pg55.txt] (0.6401)
+  2. The Marvelous Land of Oz [pg54.txt] (0.4527)
+  3. A Little Princess [pg146.txt] (0.3979)
+  4. The Picture of Dorian Gray [pg174.txt] (0.3894)
+  5. Peter Pan [pg16.txt] (0.3750)
+
+[lab3] Huckleberry Tom Sawyer Jim raft Mississippi
+P@5=0.80 | relevant=['Huckleberry Finn', 'Tom Sawyer']
+  1. What Is Man? and Other Essays [pg70.txt] (0.5010)
+  2. The Adventures of Tom Sawyer, Complete [pg74.txt] (0.4994)
+  3. Adventures of Huckleberry Finn [pg76.txt] (0.4792)
+  4. Tom Sawyer Abroad [pg91.txt] (0.4638)
+  5. Tom Sawyer, Detective [pg93.txt] (0.4582)
+
+[lab3] Mars Barsoom Carter Dejah Thoris
+P@5=0.60 | relevant=['Mars']
+  1. The warlord of Mars [pg68.txt] (0.5004)
+  2. The gods of Mars [pg64.txt] (0.4748)
+  3. A princess of Mars [pg62.txt] (0.4422)
+  4. The Return of Tarzan [pg81.txt] (0.3863)
+  5. The Adventures of Tom Sawyer, Complete [pg74.txt] (0.3598)
+
+[paraphrase] a seafaring captain pursues an enormous animal across the ocean
+P@5=0.20 | relevant=['Moby']
+  1. Moby-Dick; or, The Whale [pg15.txt] (0.5516)
+  2. Twenty Thousand Leagues under the Sea [pg164.txt] (0.5120)
+  3. A Tramp Abroad [pg119.txt] (0.5049)
+  4. Treasure Island [pg120.txt] (0.4592)
+  5. The Complete Works of William Shakespeare [pg100.txt] (0.4391)
+
+[paraphrase] a young scientist faces the consequences of creating living matter
+P@5=0.20 | relevant=['Frankenstein']
+  1. The Project Gutenberg Encyclopedia, Volume 1 of 28 [pg200.txt] (0.5067)
+  2. The Poison Belt [pg126.txt] (0.4272)
+  3. Frankenstein; or, the modern prometheus [pg84.txt] (0.4026)
+  4. From the Earth to the moon; and, round the moon [pg83.txt] (0.3907)
+  5. The island of Doctor Moreau [pg159.txt] (0.3828)
+
+[paraphrase] a child wanders through an absurd realm where authority figures behave strangely
+P@5=0.00 | relevant=["Alice's Adventures", 'Looking-Glass']
+  1. George Sand: Some Aspects of Her Life and Writings [pg138.txt] (0.4316)
+  2. The Republic [pg150.txt] (0.4134)
+  3. A Tale of Two Cities [pg98.txt] (0.4134)
+  4. Peter Pan [pg16.txt] (0.4046)
+  5. Flatland: A Romance of Many Dimensions [pg201.txt] (0.4002)
+
+[paraphrase] a respected physician conceals a disturbing alternate identity
+P@5=0.00 | relevant=['Jekyll']
+  1. The Moon and Sixpence [pg222.txt] (0.5136)
+  2. The Return of Sherlock Holmes [pg108.txt] (0.4916)
+  3. The Project Gutenberg Encyclopedia, Volume 1 of 28 [pg200.txt] (0.4477)
+  4. The Haunted Hotel: A Mystery of Modern Venice [pg170.txt] (0.4460)
+  5. The innocence of Father Brown [pg204.txt] (0.4341)
+
+[paraphrase] an Earth traveler explores a hostile alien world and becomes involved with a local royal figure
+P@5=0.00 | relevant=['Mars']
+  1. The Arabian Nights Entertainments [pg128.txt] (0.3609)
+  2. The Complete Works of William Shakespeare [pg100.txt] (0.3447)
+  3. Paradise Lost [pg26.txt] (0.3367)
+  4. The Project Gutenberg Encyclopedia, Volume 1 of 28 [pg200.txt] (0.3363)
+  5. Roget's Thesaurus [pg22.txt] (0.3347)
+
+Mean Precision@5 (15 queries): 0.333

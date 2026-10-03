@@ -5,8 +5,8 @@
 **Live demo:** https://findex-88lp.onrender.com  
 **Версія:** 1.0.0 · **гілка:** `lab-08`
 
-> **Search demo GIF:** додати перед відеозахистом.  
-> **2–3 хв demo video:** додати посилання перед захистом.
+> **Search demo GIF:** presentation artifact to attach before defense.  
+> **2–3 min demo video:** presentation artifact to attach before defense.
 
 ### Три числа
 
@@ -88,7 +88,7 @@ Semantic mode тому позиціонується як експеримент�
 1. Search CLI значною мірою витрачає час на завантаження та JSON-десеріалізацію великого індексу, а не на сам scorer.
 2. Index save витрачає значний час на JSON encoding Python object graph.
 3. Scalene показав, що реконструкція `Posting(...)` у `InvertedIndex.load` є Python-heavy; NumPy arrays зменшують цю object overhead для scoring.
-4. `py-spy` на Windows + Python 3.13 у цьому середовищі не зміг під'єднатися до target process, тому flame graph не вигадувався і не включений як нібито отриманий артефакт.
+4. Для відтворюваності додано `.github/workflows/lab8-artifacts.yml`, який у Linux CI генерує cProfile, py-spy flame graphs, Scalene JSON та semantic Precision@5 artifact.
 
 ### Benchmark tests
 

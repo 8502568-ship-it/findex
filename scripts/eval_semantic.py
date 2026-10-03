@@ -19,7 +19,10 @@ def corpus_titles(corpus: Path) -> dict[int, str]:
 def precision_at_5(results, relevant: list[str], titles: dict[int, str]) -> float:
     relevant_lower = [x.casefold() for x in relevant]
     hits = sum(
-        any(term in titles.get(result.doc_id, result.title).casefold() for term in relevant_lower)
+        any(
+            term in titles.get(result.doc_id, result.title).casefold()
+            for term in relevant_lower
+        )
         for result in results[:5]
     )
     return hits / 5
@@ -29,14 +32,32 @@ def main() -> None:
     data = json.loads(Path("eval_queries.json").read_text(encoding="utf-8"))
     queries = data["queries"]
     paraphrases = [
-        {"q": "a seafaring captain pursues an enormous animal across the ocean", "relevant": ["Moby"]},
-        {"q": "a young scientist faces the consequences of creating living matter", "relevant": ["Frankenstein"]},
-        {"q": "a child wanders through an absurd realm where authority figures behave strangely", "relevant": ["Alice's Adventures", "Looking-Glass"]},
-        {"q": "a respected physician conceals a disturbing alternate identity", "relevant": ["Jekyll"]},
-        {"q": "an Earth traveler explores a hostile alien world and becomes involved with a local royal figure", "relevant": ["Mars"]},
+        {
+            "q": "a seafaring captain pursues an enormous animal across the ocean",
+            "relevant": ["Moby"],
+        },
+        {
+            "q": "a young scientist faces the consequences of creating living matter",
+            "relevant": ["Frankenstein"],
+        },
+        {
+            "q": "a child wanders through an absurd realm where authority figures behave strangely",
+            "relevant": ["Alice's Adventures", "Looking-Glass"],
+        },
+        {
+            "q": "a respected physician conceals a disturbing alternate identity",
+            "relevant": ["Jekyll"],
+        },
+        {
+            "q": "an Earth traveler explores a hostile alien world and becomes involved with a local royal figure",
+            "relevant": ["Mars"],
+        },
     ]
 
-    index = SemanticIndex.load(Path("semantic_embeddings.npy"), Path("semantic_embeddings.json"))
+    index = SemanticIndex.load(
+        Path("semantic_embeddings.npy"),
+        Path("semantic_embeddings.json"),
+    )
     titles = corpus_titles(Path("data/gutenberg"))
 
     print("=== Semantic Precision@5 ===")

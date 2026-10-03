@@ -17,7 +17,7 @@ def test_numpy_matches_python_order_and_scores() -> None:
         expected = idx.search("python event", k=3, scorer_name=scorer)
         actual = np_idx.search("python event", k=3, scorer=scorer)
         assert [r.doc_id for r in actual] == [r.doc_id for r in expected]
-        for left, right in zip(actual, expected):
+        for left, right in zip(actual, expected, strict=True):
             assert abs(left.score - right.score) < 1e-9
 
 

@@ -1,5 +1,3 @@
-import pytest
-
 from findex.index import InvertedIndex
 from findex.parallel import build_index
 

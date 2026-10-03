@@ -70,7 +70,7 @@ class SemanticIndex:
         ]
 
 
-def _chunks(text: str, size: int = 3000, overlap: int = 300) -> list[str]:
+def _chunks(text: str, size: int = 12000, overlap: int = 1000) -> list[str]:
     text = " ".join(text.split())
     if not text:
         return []

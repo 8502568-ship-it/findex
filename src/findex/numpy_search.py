@@ -33,7 +33,7 @@ class NumpyIndex:
         self.total_docs = total_docs
 
     @classmethod
-    def from_index(cls, index) -> "NumpyIndex":
+    def from_index(cls, index) -> NumpyIndex:
         postings = {}
         for term, plist in index.postings.items():
             postings[term] = (

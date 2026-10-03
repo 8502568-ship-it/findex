@@ -58,11 +58,19 @@ def main() -> None:
     for case, query in cases:
         for scorer in ("bm25", "tfidf"):
             python_ms = median_ms(
-                lambda query=query, scorer=scorer: index.search(query, args.k, scorer_name=scorer),
+                lambda query=query, scorer=scorer: index.search(
+                    query,
+                    args.k,
+                    scorer_name=scorer,
+                ),
                 args.repeats,
             )
             numpy_ms = median_ms(
-                lambda query=query, scorer=scorer: numpy_index.search(query, args.k, scorer=scorer),
+                lambda query=query, scorer=scorer: numpy_index.search(
+                    query,
+                    args.k,
+                    scorer=scorer,
+                ),
                 args.repeats,
             )
             print(

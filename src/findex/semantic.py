@@ -4,8 +4,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 from functools import lru_cache
+
+import numpy as np
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,13 +99,17 @@ def build_embeddings(
         titles[doc_id] = title
         for chunk in _chunks(text):
             doc_ids.append(doc_id)
-            texts.append(chunk)
+            texts.append(chunk[:800])
     if not texts:
         raise ValueError("No non-empty document chunks to embed.")
 
     model = SentenceTransformer(model_name)
+    embedding_inputs = [
+        f"{titles[doc_id]}\n{text}"
+        for doc_id, text in zip(doc_ids, texts, strict=True)
+    ]
     embeddings = model.encode(
-        texts,
+        embedding_inputs,
         batch_size=128,
         normalize_embeddings=True,
         show_progress_bar=True,

@@ -298,8 +298,8 @@ def search(
     if mode == "lexical":
         results = idx.search(query=query, k=k, scorer_name=scorer)
     else:
-        embeddings = Path("semantic_embeddings.npy")
-        metadata = Path("semantic_embeddings.json")
+        embeddings = Path("web/demo_embeddings.npy")
+        metadata = Path("web/demo_embeddings.json")
         if not embeddings.exists() or not metadata.exists():
             err_console.print("[red]Semantic index not found.[/red] Run `findex embed ...` first.")
             raise typer.Exit(code=1)

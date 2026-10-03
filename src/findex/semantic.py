@@ -131,7 +131,8 @@ def _model(model_name: str):
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
         raise RuntimeError(
-            "Semantic search requires sentence-transformers; install the semantic extra."
+            "Semantic search requires sentence-transformers; "
+            "install the semantic extra."
         ) from exc
     return SentenceTransformer(model_name)
 

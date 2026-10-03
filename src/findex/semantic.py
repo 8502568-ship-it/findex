@@ -70,7 +70,7 @@ class SemanticIndex:
         ]
 
 
-def _chunks(text: str, size: int = 800, overlap: int = 120) -> list[str]:
+def _chunks(text: str, size: int = 3000, overlap: int = 300) -> list[str]:
     text = " ".join(text.split())
     if not text:
         return []
@@ -105,7 +105,7 @@ def build_embeddings(
     model = SentenceTransformer(model_name)
     embeddings = model.encode(
         texts,
-        batch_size=32,
+        batch_size=128,
         normalize_embeddings=True,
         show_progress_bar=True,
     )

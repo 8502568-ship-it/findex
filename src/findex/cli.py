@@ -317,8 +317,18 @@ def search(
             for rank, item in enumerate(semantic_hits, 1):
                 ranks[item.doc_id] = ranks.get(item.doc_id, 0.0) + 1.0 / (60 + rank)
             by_id = {r.doc_id: r for r in lexical}
-            by_id.update({h.doc_id: SearchResult(h.doc_id, h.score, h.title, "") for h in semantic_hits})
-            results = [by_id[doc_id] for doc_id in sorted(ranks, key=lambda d: (-ranks[d], d))[:k]]
+            by_id.update(
+                {h.doc_id: SearchResult(h.doc_id, h.score, h.title, "") for h in semantic_hits}
+            )
+            results = [
+                SearchResult(
+                    doc_id,
+                    ranks[doc_id],
+                    by_id[doc_id].title,
+                    "",
+                )
+                for doc_id in sorted(ranks, key=lambda d: (-ranks[d], d))[:k]
+            ]
 
     if as_json:
         for r in results:

@@ -25,7 +25,9 @@ def pick_rare_term(index: InvertedIndex) -> str:
         if len(postings) == 1 and term.isalpha() and len(term) >= 5
     ]
     if not candidates:
-        raise RuntimeError("Could not find an alphabetic term with document frequency 1")
+        raise RuntimeError(
+            "Could not find an alphabetic term with document frequency 1"
+        )
     return min(candidates, key=lambda term: (len(term), term))
 
 
@@ -56,11 +58,11 @@ def main() -> None:
     for case, query in cases:
         for scorer in ("bm25", "tfidf"):
             python_ms = median_ms(
-                lambda: index.search(query, args.k, scorer_name=scorer),
+                lambda query=query, scorer=scorer: index.search(query, args.k, scorer_name=scorer),
                 args.repeats,
             )
             numpy_ms = median_ms(
-                lambda: numpy_index.search(query, args.k, scorer=scorer),
+                lambda query=query, scorer=scorer: numpy_index.search(query, args.k, scorer=scorer),
                 args.repeats,
             )
             print(

@@ -1,26 +1,16 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
-from findex.corpus import iter_documents
 from findex.semantic import SemanticIndex, embed_query
 
 
-def corpus_titles(corpus: Path) -> dict[int, str]:
-    titles: dict[int, str] = {}
-    for doc in iter_documents(corpus):
-        match = re.search(r"(?im)^Title:\s*(.+?)\s*$", doc.text[:12000])
-        titles[doc.doc_id] = match.group(1).strip() if match else doc.path.name
-    return titles
-
-
-def precision_at_5(results, relevant: list[str], titles: dict[int, str]) -> float:
+def precision_at_5(results, relevant: list[str]) -> float:
     relevant_lower = [x.casefold() for x in relevant]
     hits = sum(
         any(
-            term in titles.get(result.doc_id, result.title).casefold()
+            term in result.title.casefold()
             for term in relevant_lower
         )
         for result in results[:5]
@@ -64,20 +54,18 @@ def main() -> None:
         Path("web/demo_embeddings.npy"),
         Path("web/demo_embeddings.json"),
     )
-    titles = corpus_titles(Path("data/gutenberg"))
 
     print("=== Semantic Precision@5 ===")
     scores: list[float] = []
     for group, items in (("lab3", queries), ("paraphrase", paraphrases)):
         for item in items:
             results = index.search(embed_query(item["q"]), k=5)
-            p5 = precision_at_5(results, item["relevant"], titles)
+            p5 = precision_at_5(results, item["relevant"])
             scores.append(p5)
             print(f"\n[{group}] {item['q']}")
             print(f"P@5={p5:.2f} | relevant={item['relevant']}")
             for rank, result in enumerate(results, 1):
-                display = titles.get(result.doc_id, result.title)
-                print(f"  {rank}. {display} [{result.title}] ({result.score:.4f})")
+                print(f"  {rank}. {result.title} ({result.score:.4f})")
 
     print(
         f"\nMean Precision@5 ({len(scores)} queries): "

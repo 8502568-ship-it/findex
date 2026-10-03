@@ -1,4 +1,120 @@
-# findex — Лаба 1: ітератори, генератори та корпус
+# findex — Лаба 8: профілювання, NumPy та семантичний пошук
+
+**Один рядок:** `findex` — навчальна пошукова система по 200 книгах Project Gutenberg з BM25/TF-IDF, NumPy-оптимізацією та експериментальним semantic/hybrid search.
+
+**Live demo:** https://findex-88lp.onrender.com  
+**Версія:** 1.0.0 · **гілка:** `lab-08`
+
+> **Search demo GIF:** додати перед відеозахистом.  
+> **2–3 хв demo video:** додати посилання перед захистом.
+
+### Три числа
+
+| Показник | Результат |
+|---|---:|
+| Corpus | **200 документів / 21,052,550 токенів** |
+| Deployed p95 | **385.51 ms** |
+| Найбільший speedup scorer | **7.01×** |
+
+### Data path
+
+```text
+Project Gutenberg
+      │
+      ▼
+data/gutenberg/*.txt
+      │
+      ├──► findex index ──► web/demo_index.json
+      │                         │
+      │                         └──► BM25 / TF-IDF / NumPy
+      │
+      └──► findex embed ──► web/demo_embeddings.npy + metadata.json
+                                │
+                                └──► semantic / hybrid
+```
+
+### Лабораторії 1–8 — коротка карта результатів
+
+| Лаба | Основний результат |
+|---|---|
+| 1 | Lazy generators для корпусу та токенізації |
+| 2 | Інвертований індекс і статистика |
+| 3 | BM25 / TF-IDF та контроль порядку результатів |
+| 4 | Індексація/пошук і CLI-пакування |
+| 5 | Processes/threads, GIL, вимірювання паралельної індексації |
+| 6 | Async crawler з retry, robots, limits та streaming JSONL |
+| 7 | FastAPI web search, pagination, health-check, Render |
+| 8 | cProfile/Scalene, NumPy postings, top-k, semantic/hybrid search, CI benchmarks |
+
+## Лабораторна 8 — профілювання, NumPy і семантичний пошук
+
+### Що зроблено
+
+- cProfile для `findex index` і `findex search`;
+- Scalene для розділення Python/native часу та пам'яті;
+- NumPy postings: `int32` doc IDs, TF і довжини документів;
+- vectorized BM25/TF-IDF та `np.argpartition` для top-k;
+- pytest-benchmark для `search` і `build_index`;
+- semantic embeddings через `sentence-transformers/all-MiniLM-L6-v2`;
+- `lexical`, `semantic`, `hybrid` режими в CLI та web UI;
+- RRF для hybrid;
+- CI-перевірки;
+- Docker build попередньо завантажує semantic model та будує demo embeddings.
+
+### NumPy benchmark
+
+| case | query | scorer | Python ms | NumPy ms | speedup |
+|---|---|---|---:|---:|---:|
+| frequent | `the` | bm25 | 0.488 | 0.086 | 5.70× |
+| frequent | `the` | tfidf | 0.401 | 0.085 | 4.72× |
+| rare | `aaasd` | bm25 | 0.006 | 0.057 | 0.11× |
+| rare | `aaasd` | tfidf | 0.006 | 0.044 | 0.14× |
+| 3-term | `the event loop` | bm25 | 0.770 | 0.120 | 6.44× |
+| 3-term | `the event loop` | tfidf | 0.677 | 0.097 | 7.01× |
+
+Для рідкісного терма прискорення відсутнє: на дуже малому posting list overhead NumPy перевищує виграш від vectorization.
+
+### Semantic evaluation
+
+- 10 labeled Lab 3 queries: mean Precision@5 = **0.46**.
+- 5 paraphrases without document words: mean Precision@5 = **0.08**.
+- Combined mean over 15 queries: **0.333**.
+- Embeddings: **10,892 chunks × 384 float32**, 200 documents.
+
+Semantic mode тому позиціонується як експериментальний: він додає інший сигнал, але на цьому малому labeled set не демонструє стабільної переваги над lexical retrieval.
+
+### Profiling conclusions
+
+1. Search CLI значною мірою витрачає час на завантаження та JSON-десеріалізацію великого індексу, а не на сам scorer.
+2. Index save витрачає значний час на JSON encoding Python object graph.
+3. Scalene показав, що реконструкція `Posting(...)` у `InvertedIndex.load` є Python-heavy; NumPy arrays зменшують цю object overhead для scoring.
+4. `py-spy` на Windows + Python 3.13 у цьому середовищі не зміг під'єднатися до target process, тому flame graph не вигадувався і не включений як нібито отриманий артефакт.
+
+### Benchmark tests
+
+```text
+test_benchmark_search:
+  median 77.8001 us
+  mean   80.9186 us
+  12,358.10 ops/s
+
+test_benchmark_build_index:
+  median 1,867.7001 us
+  mean   2,008.5719 us
+  497.87 ops/s
+```
+
+### Limitations
+
+- semantic model `all-MiniLM-L6-v2` is CPU-based and increases image size/build time;
+- semantic quality is sensitive to chunking and the small labeled evaluation set;
+- rare posting lists can be faster with the original Python scorer;
+- persisted inverted index is still JSON, so CLI startup/load remains a major cost;
+- `py-spy` flame graph was not produced because of the Windows/Python 3.13 profiler limitation;
+- search GIF and 2–3 minute video are manual presentation artifacts and must be attached before defense.
+
+---
+# Лабораторна 1 — ітератори, генератори та корпус
 
 Перший крок власної пошукової системи `findex` (курс «Python — Build a Search Engine»).
 Ідея лаби: корпус будь-якого розміру проходить через токенізацію та підрахунок термів

@@ -191,8 +191,8 @@ def index(
 @app.command("embed")
 def embed(
     corpus_dir: Annotated[Path, typer.Argument(help="Path to folder with text documents")],
-    output: Annotated[Path, typer.Option("--output", "-o", help="Output .npy embedding matrix")] = Path("semantic_embeddings.npy"),
-    metadata: Annotated[Path, typer.Option("--metadata", help="Output JSON metadata for embedding rows")] = Path("semantic_embeddings.json"),
+    output: Annotated[Path, typer.Option("--output", "-o", help="Output .npy embedding matrix")] = Path("web/demo_embeddings.npy"),
+    metadata: Annotated[Path, typer.Option("--metadata", help="Output JSON metadata for embedding rows")] = Path("web/demo_embeddings.json"),
     model: Annotated[str, typer.Option("--model", help="Sentence-transformers model name")] = "sentence-transformers/all-MiniLM-L6-v2",
 ) -> None:
     """Build normalized semantic embeddings for a text corpus."""

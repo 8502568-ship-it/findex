@@ -4,7 +4,7 @@ ENV HF_HOME=/opt/huggingface
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY web ./web
-RUN uv sync --frozen --no-dev --extra semantic --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 RUN uv pip install --system --no-cache-dir ".[semantic]"
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 RUN findex embed web/demo_docs.jsonl --output web/demo_embeddings.npy --metadata web/demo_embeddings.json
